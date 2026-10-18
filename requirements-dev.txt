@@ -1,0 +1,7 @@
+# Development-only dependencies. Not needed to run EZ Mark itself.
+# Install on top of the runtime requirements:
+#   pip install -r requirements.txt -r requirements-dev.txt
+pytest>=8.0
+ruff>=0.5
+# httpx backs FastAPI's TestClient, used only by the test suite.
+httpx>=0.27

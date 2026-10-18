@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('sheets.title') }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow"><a href="/exams/{{ exam.id }}" style="text-decoration:none;color:inherit;">{{ exam.name }}</a></p>
+      <h1>{{ _('sheets.header') }}</h1>
+      <p class="page-subtitle">{{ _('flow.step_3_of_3_generate') }}</p>
+    </div>
+    <div class="page-header-actions">
+      {% if download_path %}
+        <a class="btn btn-primary" href="/exams/{{ exam.id }}/sheets/download/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          {{ _('sheets.download_zip') }}
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-error" role="alert">
+      {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="flow-stepper">
+    <div class="is-done"><span>1</span> {{ _('flow.details') }}</div>
+    <div class="is-done"><span>2</span> {{ _('flow.roster') }}</div>
+    <div class="is-current"><span>3</span> {{ _('flow.generate') }}</div>
+  </div>
+
+  <!-- Generation summary -->
+  <dl class="gen-summary">
+    <div class="gen-summary-item">
+      <dt>{{ _('students.title') }}</dt>
+      <dd>{{ included_student_count }}</dd>
+    </div>
+    <div class="gen-summary-item">
+      <dt>{{ _('sheets.sheets_per_student') }}</dt>
+      <dd>{{ active_sheet_count }}</dd>
+    </div>
+    <div class="gen-summary-item">
+      <dt>{{ _('sheets.total_pages') }}</dt>
+      <dd>{{ included_student_count * active_sheet_count }}</dd>
+    </div>
+    <div class="gen-summary-item">
+      <dt>{{ _('sheets.last_generated') }}</dt>
+      <dd style="font-size:18px;">
+        {% if last_generated_at %}
+          {{ last_generated_at.strftime("%Y-%m-%d %H:%M") }}
+        {% else %}
+          {{ _('sheets.not_generated_yet') }}
+        {% endif %}
+      </dd>
+    </div>
+    <div class="gen-summary-item">
+      <dt>{{ _('sheets.qr_mapping') }}</dt>
+      <dd style="font-size:18px; color: var(--clr-success);">✓ {{ _('sheets.qr_mapping_status') }}</dd>
+    </div>
+  </dl>
+
+  <!-- Generate action -->
+  <div class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-header">
+      <h2>{{ _('sheets.generation') }}</h2>
+    </div>
+    <div class="panel-body">
+      <p>{{ _('sheets.generation_desc') }}</p>
+      {% if download_path %}
+        <div class="form-actions" style="justify-content:flex-start; gap: var(--sp-3);">
+          <a class="btn btn-primary btn-lg" href="/exams/{{ exam.id }}/sheets/download/latest">
+            {{ _('sheets.download_zip') }}
+          </a>
+          <form method="post" action="/exams/{{ exam.id }}/sheets/generate" style="margin:0;">
+            <button class="btn btn-secondary btn-lg" type="submit">
+              {{ _('sheets.regenerate') }}
+            </button>
+          </form>
+          {% if exam.assessment_type != "peer_review" %}
+            <form method="post" action="/exams/{{ exam.id }}/sheets/blank" style="margin:0;">
+              <button class="btn btn-secondary btn-lg" type="submit" title="{{ _('sheets.blank.hint') }}">
+                {{ _('sheets.blank.download') }}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+        {% if exam.assessment_type != "peer_review" %}
+          <p class="muted text-sm" style="margin-top: var(--sp-2);">{{ _('sheets.blank.hint') }}</p>
+        {% endif %}
+      {% else %}
+      <form method="post" action="/exams/{{ exam.id }}/sheets/generate">
+        <button class="btn btn-primary btn-lg" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9"  y1="15" x2="15" y2="15"/>
+          </svg>
+          {{ _('sheets.generate_btn') }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Print instructions -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>{{ _('sheets.print_instructions') }}</h2>
+    </div>
+    <div class="panel-body" style="color: var(--clr-text-2);">
+      <p>{{ _('sheets.print_instructions_desc1') }}</p>
+      <p>{{ _('sheets.print_instructions_desc2') }}</p>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{#
+  One session row for the /insights listing. Expects `session` (a result-session view object
+  with `.exam`) in context. Included from insights/index.html for the main list and the
+  same-month date fallback.
+#}
+{% set exam = session.exam %}
+<div class="session-card">
+  <div class="session-card-main">
+    <div class="session-card-info">
+      <a class="session-card-title" href="/exams/{{ exam.id }}">{{ exam.name }}</a>
+      <div class="session-card-meta">
+        {% if exam.assessment_type == "peer_review" %}
+          <span class="type-pill peer">{{ _('exams.peer_review') }}</span>
+        {% else %}
+          <span class="type-pill test">{{ _('exams.generic_test') }}</span>
+        {% endif %}
+        <span class="status-badge" data-status="{{ exam.status }}">{{ _('exams.status.' ~ exam.status) }}</span>
+        {% if exam.exam_date %}
+          <span class="muted text-sm">{{ exam.exam_date }}</span>
+        {% endif %}
+      </div>
+      <p class="muted text-sm" style="margin: var(--sp-2) 0 0;">
+        {% if session.state == "needs_review" %}
+          {{ _('insights_overview.state.needs_review', count=session.review_count) }}
+        {% elif session.state in ["not_calculated", "ready_to_score"] %}
+          {{ _('insights_overview.state.not_calculated') }}
+        {% elif session.state == "results_ready" %}
+          {{ _('insights_overview.state.ready') }}
+        {% else %}
+          {{ _('insights_overview.state.no_scans') }}
+        {% endif %}
+      </p>
+    </div>
+    <div class="session-card-stats">
+      <div class="session-stat">
+        <span class="session-stat-value">{{ exam.students|length }}</span>
+        <span class="session-stat-label">{{ _('insights_overview.students') }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="session-card-actions">
+    {% if session.is_archived %}
+      {% if session.has_results %}
+        <a class="btn btn-primary btn-sm" href="/exams/{{ exam.id }}/results">{{ _('insights_overview.view_insights') }}</a>
+      {% endif %}
+    {% elif session.state == "needs_review" %}
+      <a class="btn btn-primary btn-sm" href="{{ session.review_url }}">{{ _('insights_overview.continue_review') }}</a>
+    {% elif session.state in ["not_calculated", "ready_to_score"] %}
+      <form method="post" action="/exams/{{ exam.id }}/results/recalculate" style="margin:0;">
+        <button class="btn btn-primary btn-sm" type="submit">{{ _('insights_overview.calculate_results') }}</button>
+      </form>
+    {% elif session.state == "results_ready" %}
+      <a class="btn btn-primary btn-sm" href="/exams/{{ exam.id }}/results">{{ _('insights_overview.view_insights') }}</a>
+    {% else %}
+      <a class="btn btn-primary btn-sm" href="{{ session.upload_url }}">{{ _('scans.upload') }}</a>
+    {% endif %}
+    <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}">{{ _('insights_overview.open_session') }}</a>
+  </div>
+</div>

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('exams.competencies.title') }} · {{ exam.name }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('exams.competencies.header') }} · {{ _('exams.peer_review') }}</p>
+      <h1>{{ exam.name }}</h1>
+      <p class="muted">{{ _('exams.competencies.desc') }}</p>
+    </div>
+    <a class="button-secondary" href="/exams/{{ exam.id }}">{{ _('common.back') }}</a>
+  </section>
+
+  <div class="two-column">
+    <!-- Competency list and setup -->
+    <div>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>{{ _('exams.competencies.defined') }}</h2>
+        </div>
+        {% if competencies %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ _('common.name') }}</th>
+                <th>{{ _('common.description') }}</th>
+                <th>{{ _('common.scale') }}</th>
+                <th>{{ _('common.action') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for comp in competencies %}
+                <tr>
+                  <td><strong>{{ comp.name }}</strong></td>
+                  <td>{{ comp.description or "—" }}</td>
+                  <td>{{ comp.min_score }} to {{ comp.max_score }}</td>
+                  <td>
+                    <form method="post" action="/exams/{{ exam.id }}/competencies/{{ comp.id }}/delete" style="display:inline;" onsubmit="return confirm('{{ _('exams.competencies.delete_confirm') }}');">
+                      <button class="table-action" style="color:var(--color-error); background:none; border:none; cursor:pointer;" type="submit">{{ _('common.delete') }}</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state">
+            <h3>{{ _('exams.competencies.empty') }}</h3>
+            <p>{{ _('exams.competencies.empty_desc') }}</p>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="panel" style="margin-top: 2rem;">
+        <div class="panel-header">
+          <h2>{{ _('exams.competencies.add') }}</h2>
+        </div>
+        <form class="form-panel" method="post" action="/exams/{{ exam.id }}/competencies">
+          <label>
+            {{ _('exams.competencies.input_name') }}
+            <input name="name" placeholder="e.g. Communication" required>
+          </label>
+          <label>
+            {{ _('exams.competencies.input_desc') }}
+            <textarea name="description" rows="3" placeholder="Specify evaluation guidelines..."></textarea>
+          </label>
+          <div class="two-column" style="gap: 1rem;">
+            <label>
+              {{ _('exams.competencies.min') }}
+              <input name="min_score" type="number" value="1" min="1" max="5" required>
+            </label>
+            <label>
+              {{ _('exams.competencies.max') }}
+              <input name="max_score" type="number" value="5" min="1" max="5" required>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="button-primary" type="submit">{{ _('exams.competencies.add') }}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+{% endblock %}

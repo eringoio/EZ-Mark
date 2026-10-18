@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('errors.server_error_title') }}{% endblock %}
+
+{% block content %}
+  <section class="empty-state">
+    <h1>{{ _('errors.server_error_header') }}</h1>
+    <p>{{ _('errors.server_error_desc') }}</p>
+    <a class="button-primary" href="/">{{ _('errors.back_to_dashboard') }}</a>
+  </section>
+{% endblock %}

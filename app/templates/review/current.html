@@ -1,0 +1,78 @@
+{% if current %}
+  <div class="review-item-card">
+    <div class="panel-header">
+      <h2>{{ _('review.current.panel_header') }}</h2>
+    </div>
+
+    <dl class="review-detail-grid">
+      <div class="review-detail-item">
+        <dt>{{ _('review.current.student') }}</dt>
+        <dd>
+          {% if current.scanned_page and current.scanned_page.sheet_instance %}
+            {{ current.scanned_page.sheet_instance.printed_student_number }} / {{ current.scanned_page.sheet_instance.printed_name }}
+          {% else %}
+            —
+          {% endif %}
+        </dd>
+      </div>
+      <div class="review-detail-item">
+        <dt>{{ _('review.current.sheet') }}</dt>
+        <dd>
+          {% if current.scanned_page and current.scanned_page.sheet_instance and current.scanned_page.sheet_instance.physical_sheet %}
+            {{ current.scanned_page.sheet_instance.physical_sheet.sheet_name }}
+          {% else %}
+            —
+          {% endif %}
+        </dd>
+      </div>
+      <div class="review-detail-item">
+        <dt>{{ _('review.current.question') }}</dt>
+        <dd><strong>{{ current.question.display_label if current.question else "—" }}</strong></dd>
+      </div>
+      <div class="review-detail-item">
+        <dt>{{ _('review.current.correct_answer') }}</dt>
+        <dd>{{ current.question.correct_answer if current.question and current.question.correct_answer else "—" }}</dd>
+      </div>
+      <div class="review-detail-item">
+        <dt>{{ _('review.current.detected') }}</dt>
+        <dd>{{ current.detected_answer or "—" }}</dd>
+      </div>
+      <div class="review-detail-item">
+        <dt>{{ _('review.current.problem') }}</dt>
+        <dd><span class="status-badge needs-review">{{ current.status|replace("_", " ")|title }}</span></dd>
+      </div>
+    </dl>
+
+    <div class="review-actions">
+      {% if current.question %}
+        {% for choice in range(1, current.question.choice_count + 1) %}
+          <form method="post" action="/responses/{{ current.id }}/correct">
+            <input type="hidden" name="final_answer" value="{{ choice }}">
+            <button class="review-choice-btn" type="submit"
+                    data-answer="{{ choice }}" title="Mark as {{ choice }}">
+              {{ choice }}
+            </button>
+          </form>
+        {% endfor %}
+        <form id="review-blank-form" method="post" action="/responses/{{ current.id }}/mark-blank">
+          <button class="review-choice-btn" type="submit">{{ _('review.current.blank') }}</button>
+        </form>
+      {% else %}
+        <p class="form-help" style="flex-basis: 100%;">
+          この回答は問題データとの紐付けが壊れているため確認できません。テンプレート確認または修復を実行してください。
+        </p>
+      {% endif %}
+      <form id="review-invalid-form" method="post" action="/responses/{{ current.id }}/mark-invalid">
+        <button class="review-choice-btn" type="submit" style="color: var(--clr-danger);">{{ _('review.current.invalid') }}</button>
+      </form>
+    </div>
+
+  </div>
+{% else %}
+  <div class="panel">
+    <div class="empty-state" style="padding: var(--sp-6);">
+      <h3>{{ _('review.current.empty') }}</h3>
+      <p>{{ _('review.current.empty_desc') }}</p>
+    </div>
+  </div>
+{% endif %}

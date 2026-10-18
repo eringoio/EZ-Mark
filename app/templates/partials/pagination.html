@@ -1,0 +1,37 @@
+{% if pagination %}
+  <nav class="pagination-bar" aria-label="{{ _('pagination.page') }}">
+    <div class="pagination-summary">
+      {{ pagination.start_index }}-{{ pagination.end_index }} / {{ pagination.total }}
+    </div>
+    <form method="get" action="{{ filter_action }}" class="pagination-size">
+      <input type="hidden" name="search" value="{{ filters.search }}">
+      <input type="hidden" name="type" value="{{ filters.type }}">
+      <input type="hidden" name="date" value="{{ filters.date }}">
+      <input type="hidden" name="sort" value="{{ filters.sort }}">
+      <input type="hidden" name="archived" value="{{ filters.archived }}">
+      <input type="hidden" name="page" value="1">
+      <label>
+        {{ _('pagination.page_size') }}
+        <select name="page_size" onchange="this.form.submit()">
+          {% for size in [25, 50, 100] %}
+            <option value="{{ size }}" {% if pagination.page_size == size %}selected{% endif %}>{{ size }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </form>
+    <div class="pagination-links">
+      {% set base = filter_action ~ '?search=' ~ filters.search ~ '&type=' ~ filters.type ~ '&date=' ~ filters.date ~ '&sort=' ~ filters.sort ~ '&archived=' ~ filters.archived ~ '&page_size=' ~ pagination.page_size %}
+      {% if pagination.has_prev %}
+        <a class="btn btn-secondary btn-sm" href="{{ base }}&page={{ pagination.prev_page }}">{{ _('pagination.previous') }}</a>
+      {% else %}
+        <span class="btn btn-secondary btn-sm disabled">{{ _('pagination.previous') }}</span>
+      {% endif %}
+      <span>{{ _('pagination.page') }} {{ pagination.page }} / {{ pagination.total_pages }}</span>
+      {% if pagination.has_next %}
+        <a class="btn btn-secondary btn-sm" href="{{ base }}&page={{ pagination.next_page }}">{{ _('pagination.next') }}</a>
+      {% else %}
+        <span class="btn btn-secondary btn-sm disabled">{{ _('pagination.next') }}</span>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}

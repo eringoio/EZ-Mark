@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.name }} · {{ _('peer_review.template') }}{% endblock %}
+
+{% block content %}
+  {% set ready = issues|length == 0 %}
+  {% set base = "/templates/" ~ template.id ~ "/peer-review" %}
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">
+        <a href="/templates/{{ template.id }}" style="text-decoration:none;color:inherit;">{{ template.name }}</a>
+      </p>
+      <h1>{{ _('peer_review.template') }}</h1>
+      <p class="page-subtitle">{{ _('peer_review.reusable_note') }}</p>
+    </div>
+    <div class="page-header-actions">
+      <span class="pr-save-status" id="pr-save-status" aria-live="polite"></span>
+      <a class="btn btn-secondary" href="/templates/{{ template.id }}">{{ _('common.back') }}</a>
+      {% if ready %}
+        <a class="btn btn-primary" href="/templates/{{ template.id }}/runs/new">{{ _('peer_review.create_session') }}</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="pr-status {{ 'is-ready' if ready else 'is-pending' }}">
+    {% if ready %}
+      <strong>✓ {{ _('peer_review.ready') }}</strong>
+    {% else %}
+      <strong>{{ _('peer_review.not_ready') }}</strong>
+      <ul>{% for issue in issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+
+  <!-- The builder shell (settings toolbar, editable paper canvas, roster/groups side
+       panel) is rendered by peer-review-builder.js into this container. -->
+  <div id="pr-builder-app" class="pr-builder" data-base="{{ base }}"></div>
+
+  <script id="pr-initial-state" type="application/json">{{ state|tojson }}</script>
+  <script id="pr-initial-layout" type="application/json">{{ layout|tojson }}</script>
+  <script>
+    window.PR_I18N = {
+      settings: {{ _('peer_review.settings')|tojson }},
+      anonymous: {{ _('peer_review.anonymous')|tojson }},
+      preview_note: {{ _('peer_review.preview_note')|tojson }},
+      students_per_page_short: {{ _('peer_review.students_per_page_short')|tojson }},
+      edit_on_sheet_hint: {{ _('peer_review.edit_on_sheet_hint')|tojson }},
+      add_column: {{ _('peer_review.add_column')|tojson }},
+      edit_title_hint: {{ _('peer_review.edit_title_hint')|tojson }},
+      close: {{ _('peer_review.close')|tojson }},
+      new_item_default: {{ _('peer_review.new_item_default')|tojson }},
+      title: {{ _('peer_review.title')|tojson }},
+      score_min: {{ _('peer_review.score_min')|tojson }},
+      score_max: {{ _('peer_review.score_max')|tojson }},
+      students_per_page: {{ _('peer_review.students_per_page')|tojson }},
+      competencies: {{ _('peer_review.competencies')|tojson }},
+      competency: {{ _('peer_review.competency')|tojson }},
+      competency_name: {{ _('peer_review.competency_name')|tojson }},
+      furigana_label: {{ _('peer_review.furigana_label')|tojson }},
+      furigana_placeholder: {{ _('peer_review.competency_furigana_placeholder')|tojson }},
+      short_label_label: {{ _('peer_review.short_label_label')|tojson }},
+      short_label_placeholder: {{ _('peer_review.short_label_placeholder')|tojson }},
+      move_up: {{ _('peer_review.move_up')|tojson }},
+      move_down: {{ _('peer_review.move_down')|tojson }},
+      ruby_label: {{ _('peer_review.ruby_label')|tojson }},
+      ruby_base_placeholder: {{ _('peer_review.ruby_base_placeholder')|tojson }},
+      ruby_reading_placeholder: {{ _('peer_review.ruby_reading_placeholder')|tojson }},
+      ruby_add: {{ _('peer_review.ruby_add')|tojson }},
+      ruby_short_label_note: {{ _('peer_review.ruby_short_label_note')|tojson }},
+      delete_competency_confirm: {{ _('peer_review.delete_competency_confirm')|tojson }},
+      session_roster_note: {{ _('peer_review.session_roster_note')|tojson }},
+      add_competency: {{ _('peer_review.add_competency')|tojson }},
+      no_competencies: {{ _('peer_review.no_competencies')|tojson }},
+      rater_groups: {{ _('peer_review.rater_groups')|tojson }},
+      rater_group: {{ _('peer_review.rater_group')|tojson }},
+      add_group: {{ _('peer_review.add_group')|tojson }},
+      no_groups: {{ _('peer_review.no_groups')|tojson }},
+      weight_percent: {{ _('peer_review.weight_percent')|tojson }},
+      active: {{ _('peer_review.active')|tojson }},
+      inactive: {{ _('peer_review.inactive')|tojson }},
+      advanced_settings: {{ _('peer_review.advanced_settings')|tojson }},
+      roster: {{ _('peer_review.roster')|tojson }},
+      template_roster_note: {{ _('peer_review.template_roster_note')|tojson }},
+      target: {{ _('peer_review.target')|tojson }},
+      delete: {{ _('peer_review.delete')|tojson }},
+      page_tab: {{ _('peer_review.page_tab')|tojson }},
+      saving: {{ _('peer_review.saving')|tojson }},
+      saved: {{ _('peer_review.saved')|tojson }},
+      save_error: {{ _('peer_review.save_error')|tojson }},
+      orientation: {{ _('peer_review.orientation')|tojson }},
+      orientation_auto: {{ _('peer_review.orientation_auto')|tojson }},
+      orientation_portrait: {{ _('peer_review.orientation_portrait')|tojson }},
+      orientation_landscape: {{ _('peer_review.orientation_landscape')|tojson }},
+      density: {{ _('peer_review.density')|tojson }},
+      density_standard: {{ _('peer_review.density_standard')|tojson }},
+      density_compact: {{ _('peer_review.density_compact')|tojson }},
+      density_relaxed: {{ _('peer_review.density_relaxed')|tojson }},
+      warn_text_too_long: {{ _('peer_review.warn_text_too_long')|tojson }},
+      will_be_portrait: {{ _('peer_review.will_be_portrait')|tojson }},
+      will_be_landscape: {{ _('peer_review.will_be_landscape')|tojson }},
+      auto_prefix: {{ _('peer_review.auto_prefix')|tojson }},
+      per_page_label: {{ _('peer_review.per_page_label')|tojson }},
+      warn_reduced: {{ _('peer_review.warn_reduced')|tojson }},
+      warn_does_not_fit: {{ _('peer_review.warn_does_not_fit')|tojson }},
+      split_label: {{ _('peer_review.split_label')|tojson }},
+      split_item: {{ _('peer_review.split_item')|tojson }},
+      fix_intro: {{ _('peer_review.fix_intro')|tojson }},
+      fix_hide_furigana: {{ _('peer_review.fix_hide_furigana')|tojson }},
+      fix_use_compact: {{ _('peer_review.fix_use_compact')|tojson }},
+      fix_short_label: {{ _('peer_review.fix_short_label')|tojson }},
+      fix_set_per_page: {{ _('peer_review.fix_set_per_page')|tojson }}
+    };
+  </script>
+  <script src="/static/js/peer-review-builder.js" defer></script>
+{% endblock %}
+
+{% block head %}
+<style>
+/* WYSIWYG builder: settings toolbar, editable paper canvas, roster/groups side panel. */
+.pr-builder { display: block; }
+.pr-toolbar2 { display: flex; flex-direction: column; gap: var(--sp-2); background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--r-lg); padding: var(--sp-3); margin-bottom: var(--sp-4); }
+.pr-toolbar-fields { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: flex-end; }
+.pr-toolbar-fields .form-field { margin: 0; }
+.pr-toolbar-fields .form-label { font-size: 11px; margin: 0 0 2px; color: var(--clr-muted); }
+.pr-tb-title { flex: 1 1 200px; min-width: 160px; }
+.pr-tb-num .form-input { width: 78px; }
+.pr-toolbar2 .pr-plan { margin-top: 0; }
+.pr-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: var(--sp-5); align-items: start; }
+@media (max-width: 980px) { .pr-workspace { grid-template-columns: 1fr; } }
+.pr-canvas-col { min-width: 0; position: sticky; top: var(--sp-4); }
+.pr-canvas-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); flex-wrap: wrap; }
+.pr-canvas { min-width: 0; }
+.pr-tabs { display: flex; gap: var(--sp-1); flex-wrap: wrap; margin-bottom: var(--sp-2); }
+.pr-tab { border: 1px solid var(--clr-border); background: var(--clr-surface); border-radius: var(--r-md); padding: 4px 12px; font-size: 13px; cursor: pointer; color: var(--clr-muted); }
+.pr-tab.is-active { border-color: var(--clr-primary); background: var(--clr-primary-soft); color: var(--clr-primary); font-weight: 600; }
+.pr-paper-host { position: relative; width: 100%; max-width: 1100px; margin: 0 auto; background: #fff; border: 1px solid var(--clr-border); border-radius: var(--r-md); box-shadow: var(--shadow-sm); }
+.pr-svg-layer, .pr-overlay, .pr-col-editor { position: absolute; inset: 0; }
+.pr-svg-layer svg, .pr-paper { width: 100%; height: 100%; display: block; }
+.pr-overlay { pointer-events: none; }
+.pr-overlay > * { pointer-events: auto; }
+.pr-col-hit { position: absolute; background: transparent; border: 1px dashed transparent; border-radius: 4px; cursor: pointer; padding: 0; transition: background .1s, border-color .1s; }
+.pr-col-hit:hover { background: rgba(58,110,165,0.07); border-color: var(--clr-primary, #3a6ea5); }
+.pr-col-hit.is-active { background: rgba(58,110,165,0.12); border-color: var(--clr-primary, #3a6ea5); border-style: solid; }
+.pr-col-ico { position: absolute; top: 2px; right: 3px; font-size: 11px; color: var(--clr-primary, #3a6ea5); opacity: 0; }
+.pr-col-hit:hover .pr-col-ico, .pr-col-hit.is-active .pr-col-ico { opacity: 1; }
+.pr-col-add { position: absolute; width: 24px; display: flex; align-items: center; justify-content: center; background: var(--clr-primary-soft, #eef4fb); color: var(--clr-primary, #3a6ea5); border: 1px solid var(--clr-primary, #3a6ea5); border-radius: 6px; font-size: 15px; line-height: 1; cursor: pointer; }
+.pr-col-add:hover { background: var(--clr-primary, #3a6ea5); color: #fff; }
+.pr-col-editor { pointer-events: none; }
+.pr-col-card { position: absolute; pointer-events: auto; width: min(290px, 86%); max-height: 86%; overflow: auto; background: var(--clr-surface, #fff); border: 1px solid var(--clr-border); border-radius: var(--r-md); box-shadow: 0 8px 24px rgba(0,0,0,0.18); padding: var(--sp-3); z-index: 5; display: flex; flex-direction: column; gap: 3px; }
+.pr-col-card .form-label { font-size: 11px; margin: 4px 0 0; color: var(--clr-muted); }
+.pr-col-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: 2px; }
+.pr-col-card-title { font-weight: 600; font-size: 13px; }
+.pr-col-card-tools { display: flex; gap: 2px; }
+.pr-col-card-tools .btn { padding: 0 6px; min-width: 0; }
+.pr-col-name { font-weight: 600; }
+.pr-canvas-note { margin: var(--sp-2) 0 0; }
+.pr-side { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.pr-side .panel { margin: 0; }
+.pr-side summary.panel-header { cursor: pointer; list-style: none; }
+.pr-side summary.panel-header::-webkit-details-marker { display: none; }
+.pr-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+.pr-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
+.pr-item-warn { margin: 2px 0 0; font-size: 11px; color: var(--clr-warning, #b45309); width: 100%; }
+.pr-item-list { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.pr-item { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.pr-item .form-input { flex: 1; min-width: 90px; }
+.pr-item .pr-furigana { flex: 0 1 110px; min-width: 80px; font-size: 12px; }
+.pr-comp-item { align-items: flex-start; border: 1px solid var(--clr-border); border-radius: var(--r-md); padding: var(--sp-2); background: var(--clr-surface); }
+.pr-session-note { margin: 0 0 var(--sp-2); }
+.pr-comp-reorder { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
+.pr-comp-reorder .btn { padding: 0 6px; line-height: 1.3; min-width: 0; }
+.pr-comp-reorder .btn[disabled] { opacity: 0.35; cursor: default; }
+.pr-comp-fields { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.pr-comp-fields .form-label { font-size: 11px; margin: 0; color: var(--clr-muted); }
+.pr-comp-fields .form-input { flex: none; width: 100%; min-width: 0; }
+.pr-comp-fields .pr-furigana { max-width: none; font-size: 12px; }
+.pr-comp-add .pr-comp-fields { gap: var(--sp-1); }
+.pr-ruby { margin-top: 2px; }
+.pr-ruby-summary { cursor: pointer; color: var(--clr-primary, #3a6ea5); font-size: 11px; }
+.pr-ruby-body { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.pr-ruby-note { margin: 0; font-size: 11px; color: var(--clr-warning, #b45309); }
+.pr-ruby-rows { display: flex; flex-direction: column; gap: 4px; }
+.pr-ruby-row, .pr-ruby-add { display: flex; align-items: center; gap: 4px; }
+.pr-ruby-row .form-input, .pr-ruby-add .form-input { flex: 1; min-width: 0; font-size: 12px; }
+.pr-ruby-arrow { color: var(--clr-muted); font-size: 12px; }
+.pr-weight { max-width: 84px; flex: 0 0 auto !important; }
+.pr-add-row { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; border-top: 1px dashed var(--clr-border); padding-top: var(--sp-3); }
+.pr-add-row .form-input { flex: 1; min-width: 110px; }
+.pr-save-status { font-size: 12px; color: var(--clr-muted); }
+.pr-save-status.is-error { color: var(--clr-danger, #b91c1c); }
+.pr-status { border-radius: var(--r-lg); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); font-size: 14px; }
+.pr-status.is-ready { background: var(--clr-success-soft); color: var(--clr-success-text); }
+.pr-status.is-pending { background: var(--clr-warning-soft, #fff7ed); color: var(--clr-warning-text, #9a3412); }
+.pr-status ul { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); }
+.pr-advanced summary { cursor: pointer; list-style: none; }
+.pr-advanced summary::-webkit-details-marker { display: none; }
+.pr-advanced summary h2::before { content: "▸ "; }
+.pr-advanced[open] summary h2::before { content: "▾ "; }
+.pr-empty { color: var(--clr-muted); font-size: 13px; }
+.pr-plan { margin-top: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-md); background: var(--clr-surface-2, #f3f6fa); font-size: 13px; }
+.pr-plan.is-error { background: var(--clr-danger-soft, #fef2f2); }
+.pr-plan-result { margin: 0; font-weight: 600; }
+.pr-plan-perpage { margin: var(--sp-1) 0 0; color: var(--clr-muted); }
+.pr-plan-split { margin: var(--sp-1) 0 0; color: var(--clr-muted); font-variant-numeric: tabular-nums; }
+.pr-plan-warn { margin: var(--sp-1) 0 0; color: var(--clr-danger, #b91c1c); }
+.pr-plan-hints { margin: var(--sp-2) 0 0; }
+.pr-plan-hints-head { margin: 0 0 var(--sp-1); font-weight: 600; font-size: 12px; }
+.pr-plan-hints ul { margin: 0; padding-left: 1.1em; font-size: 12px; color: var(--clr-muted); }
+.pr-plan-hints li { margin: 2px 0; }
+.btn-ghost { background: transparent; border: 1px solid var(--clr-border); }
+.btn-ghost.is-danger { color: var(--clr-danger, #b91c1c); }
+.pr-pagebreak { border-top: 2px dashed var(--clr-primary, #3a6ea5); margin: var(--sp-1) 0; }
+</style>
+{% endblock %}

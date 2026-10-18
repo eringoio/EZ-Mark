@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('templates.header') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">EZ Mark</p>
+      <h1>{{ _('templates.header') }}</h1>
+      <p class="page-subtitle">{{ _('templates.intro') }}</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-secondary" href="/templates/import-package">{{ _('packages.import_template') }}</a>
+      <a class="btn btn-primary" href="/templates/new">{{ _('templates.new') }}</a>
+    </div>
+  </div>
+
+  {% if filters %}{% include "partials/list_filters.html" %}{% endif %}
+
+  {% if template_list %}
+    {# Cards sit OUTSIDE the bulk form: each card has its own <form>s in the "…" menu, and
+       nested forms are invalid HTML. Checkboxes/footer below associate with the bulk form by
+       id via the `form` attribute instead. #}
+    <div class="card-grid">
+      {% for template in template_list %}
+        {% set selectable = true %}
+        {% set bulk_form_id = "template-bulk-form" %}
+        {% include "partials/template_summary_card.html" %}
+      {% endfor %}
+    </div>
+    <form method="post" id="template-bulk-form">
+      <input type="hidden" name="return_to" value="{{ request.url.path }}?{{ request.url.query }}">
+      {% set bulk_form_id = "template-bulk-form" %}
+      {% set bulk_archive_action = "/templates/bulk/archive" %}
+      {% set bulk_delete_action = "/templates/bulk/delete" %}
+      {% set bulk_archive_confirm = _('bulk.archive_templates_confirm') %}
+      {% set bulk_delete_confirm = _('bulk.delete_templates_confirm') %}
+      {% include "partials/bulk_selection_footer.html" %}
+    </form>
+    {% include "partials/pagination.html" %}
+  {% elif filters and filters.date %}
+    {% set has_fallback = month_fallback_items|length > 0 %}
+    {% include "partials/date_fallback_notice.html" %}
+    {% if has_fallback %}
+      <div class="card-grid">
+        {% for template in month_fallback_items %}{% include "partials/template_summary_card.html" %}{% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+      </div>
+      <h3>{{ _('templates.empty') }}</h3>
+      <p>{{ _('templates.empty_desc') }}</p>
+      <div style="display:flex; gap: var(--sp-3);">
+        <a class="btn btn-primary" href="/templates/new">{{ _('templates.new') }}</a>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

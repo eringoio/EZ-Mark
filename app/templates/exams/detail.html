@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exam.name }} · EZ Mark{% endblock %}
+
+{% block content %}
+
+  {# Determine stepper progress from status #}
+  {% set status_steps = {
+    "draft": 1,
+    "ready_to_print": 3,
+    "printed": 4,
+    "scanning": 4,
+    "needs_review": 5,
+    "results_ready": 6,
+    "locked": 6
+  } %}
+  {% set current_step = status_steps.get(exam.status, 1) %}
+  {% set included_count = exam.students|selectattr("included")|list|length %}
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">{{ _('nav.sessions') }}</p>
+      <h1>{{ exam.name }}</h1>
+      {% if exam.source_template %}
+        <p class="page-subtitle">{{ _('templates.run.created_from', name=exam.source_template.name) }}</p>
+      {% endif %}
+      <div style="display:flex; align-items:center; gap: var(--sp-3); margin-top: var(--sp-2); flex-wrap:wrap;">
+        {% if exam.assessment_type == "peer_review" %}
+          <span class="type-pill peer">{{ _('exams.peer_review') }}</span>
+        {% else %}
+          <span class="type-pill test">{{ _('exams.generic_test') }}</span>
+        {% endif %}
+        <span class="status-badge" data-status="{{ exam.status }}">{{ _('exams.status.' ~ exam.status) }}</span>
+        {% if exam.exam_date %}
+          <span class="muted text-sm">{{ exam.exam_date }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if exam.status == "archived" %}
+    <div class="panel" style="margin-bottom: var(--sp-5);">
+      <div class="panel-body" style="display:flex; align-items:center; justify-content:space-between; gap: var(--sp-4); flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0 0 var(--sp-1);">{{ _('exams.archived_banner_title') }}</h2>
+          <p class="muted" style="margin:0;">{{ _('exams.archived_banner_desc') }}</p>
+        </div>
+        <div class="form-actions" style="margin:0; flex-wrap:wrap;">
+          {% if exam.results %}
+            <a class="btn btn-primary btn-sm" href="/exams/{{ exam.id }}/results">{{ _('insights_overview.view_insights') }}</a>
+          {% endif %}
+          <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/exports">{{ _('exams.detail.exports') }}</a>
+          <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/portable-export">{{ _('packages.export_session') }}</a>
+          <form method="post" action="/exams/{{ exam.id }}/delete"
+                data-confirm="{{ _('exams.delete_confirm') }}" style="margin:0;">
+            <button class="btn btn-secondary btn-sm is-danger" type="submit">{{ _('common.delete') }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if exam.status != "archived" %}
+  <!-- Clickable stepper: each step links to its workflow page -->
+  <div class="stepper" style="margin-bottom: var(--sp-6);">
+    {% if exam.assessment_type == "peer_review" %}
+      {% set steps = [
+        (_("exams.detail.progress.setup"), "/exams/" ~ exam.id ~ "/peer-review/builder"),
+        (_("exams.detail.progress.students"), "/exams/" ~ exam.id ~ "/students"),
+        (_("exams.detail.progress.print"), "/exams/" ~ exam.id ~ "/peer-review/builder"),
+        (_("exams.detail.progress.scan"), "/exams/" ~ exam.id ~ "/peer-review/scan-batches"),
+        (_("exams.detail.progress.review"), "/exams/" ~ exam.id ~ "/peer-review/review"),
+        (_("exams.detail.progress.results"), "/exams/" ~ exam.id ~ "/results")
+      ] %}
+    {% else %}
+      {% set steps = [
+        (_("exams.detail.progress.setup"), "/exams/" ~ exam.id ~ "/edit"),
+        (_("exams.detail.progress.students"), "/exams/" ~ exam.id ~ "/students"),
+        (_("exams.detail.progress.print"), "/exams/" ~ exam.id ~ "/sheets"),
+        (_("exams.detail.progress.scan"), "/exams/" ~ exam.id ~ "/scan-batches"),
+        (_("exams.detail.progress.review"), "/exams/" ~ exam.id ~ "/review"),
+        (_("exams.detail.progress.results"), "/exams/" ~ exam.id ~ "/results")
+      ] %}
+    {% endif %}
+    {% for label, url in steps %}
+      {% set step_num = loop.index %}
+      <a class="stepper-step stepper-link {% if step_num < current_step %}is-done{% elif step_num == current_step %}is-current{% endif %}"
+         href="{{ url }}">
+        <div class="stepper-circle">
+          {% if step_num < current_step %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          {% else %}
+            {{ step_num }}
+          {% endif %}
+        </div>
+        <span class="stepper-label">{{ label }}</span>
+      </a>
+    {% endfor %}
+  </div>
+
+  {% set has_students = included_count > 0 %}
+  {% set has_sheets = exam.sheet_instances|length > 0 %}
+  {% set has_scans = exam.scan_batches|length > 0 %}
+  {% set has_results = exam.results|length > 0 %}
+  {% set key_ready = exam.assessment_type == "peer_review" or (exam.questions|length > 0 and exam.questions|selectattr("correct_answer")|list|length == exam.questions|length) %}
+
+  <!-- Next action -->
+  <div class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-body" style="display:flex; align-items:center; justify-content:space-between; gap: var(--sp-4); flex-wrap:wrap;">
+      <div>
+        <p class="eyebrow" style="margin-bottom: var(--sp-1);">{{ _('exams.detail.next_action') }}</p>
+        <h2 style="margin:0 0 var(--sp-1);">{{ action_label }}</h2>
+        <p class="muted" style="margin:0;">
+          {% if not has_students %}
+            {{ _('exams.detail.steps.add_students') }}
+          {% elif exam.assessment_type != "peer_review" and not key_ready %}
+            {{ _('exams.detail.steps.key_missing') }}
+          {% elif not has_sheets %}
+            {{ _('exams.detail.steps.generate') }}
+          {% elif not has_scans %}
+            {{ _('exams.detail.steps.upload') }}
+          {% elif review_count > 0 %}
+            {{ _('exams.detail.steps.review', count=review_count) }}
+          {% elif has_results %}
+            {{ _('exams.detail.steps.results') }}
+          {% else %}
+            {{ _('exams.detail.steps.default') }}
+          {% endif %}
+        </p>
+      </div>
+      <a class="btn btn-primary btn-lg" href="{{ action_url }}">{{ action_label }}</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Compact summary -->
+  <dl class="gen-summary" style="margin-bottom: var(--sp-5);">
+    <div class="gen-summary-item">
+      <dt>{{ _('exams.detail.students') }}</dt>
+      <dd>{{ included_count }}</dd>
+    </div>
+    {% if exam.assessment_type == "peer_review" %}
+      <div class="gen-summary-item">
+        <dt>{{ _('exams.detail.competencies') }}</dt>
+        <dd>{{ exam.competencies|length }}</dd>
+      </div>
+      <div class="gen-summary-item">
+        <dt>{{ _('exams.detail.metrics.rating_scale') }}</dt>
+        <dd>1 – 5</dd>
+      </div>
+    {% else %}
+      <div class="gen-summary-item">
+        <dt>{{ _('exams.detail.metrics.questions') }}</dt>
+        <dd>{{ exam.questions|length }}</dd>
+      </div>
+      <div class="gen-summary-item">
+        <dt>{{ _('exams.detail.metrics.sheets') }}</dt>
+        <dd>{{ exam.physical_sheets|length }}</dd>
+      </div>
+    {% endif %}
+    <div class="gen-summary-item">
+      <dt>{{ _('exams.detail.summary.last_generated') }}</dt>
+      <dd style="font-size:16px;">
+        {% if last_generated_at %}
+          {{ last_generated_at.strftime("%Y-%m-%d %H:%M") }}
+        {% else %}
+          {{ _('exams.detail.summary.not_generated') }}
+        {% endif %}
+      </dd>
+    </div>
+    <div class="gen-summary-item">
+      <dt>{{ _('exams.detail.summary.scanned_pages') }}</dt>
+      <dd>{{ scanned_page_count }}</dd>
+    </div>
+    <div class="gen-summary-item">
+      <dt>{{ _('exams.detail.summary.review_problems') }}</dt>
+      <dd {% if review_count > 0 %}style="color: var(--clr-orange);"{% endif %}>{{ review_count }}</dd>
+    </div>
+  </dl>
+
+  <!-- Secondary actions: items not already covered by the stepper or next action -->
+  {% if exam.status != "archived" %}
+  <div class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-body">
+      <div class="form-actions" style="justify-content:flex-start; flex-wrap:wrap;">
+        {% if download_path %}
+          {% if exam.assessment_type == "peer_review" %}
+            <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/peer-review/sheets/download/latest">{{ _('sheets.download_zip') }}</a>
+          {% else %}
+            <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/sheets/download/latest">{{ _('sheets.download_zip') }}</a>
+          {% endif %}
+        {% else %}
+          <form method="post" action="{% if exam.assessment_type == 'peer_review' %}/exams/{{ exam.id }}/peer-review/sheets/generate{% else %}/exams/{{ exam.id }}/sheets/generate{% endif %}" style="margin:0;">
+            <button class="btn btn-secondary btn-sm" type="submit">{{ _('sheets.generate_btn') }}</button>
+          </form>
+        {% endif %}
+        <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/edit">{{ _('exams.detail.actions.edit_setup') }}</a>
+        <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/students">{{ _('exams.detail.actions.edit_roster') }}</a>
+        {% if exam.assessment_type == "peer_review" %}
+          <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/peer-review/builder">{{ _('exams.detail.competencies') }}</a>
+        {% endif %}
+        {% if download_path %}
+          <form method="post" action="{% if exam.assessment_type == 'peer_review' %}/exams/{{ exam.id }}/peer-review/sheets/generate{% else %}/exams/{{ exam.id }}/sheets/generate{% endif %}" style="margin:0;">
+            <button class="btn btn-secondary btn-sm" type="submit">{{ _('exams.detail.actions.regenerate') }}</button>
+          </form>
+        {% endif %}
+        {% if exam.assessment_type != "peer_review" and download_path %}
+          <form method="post" action="/exams/{{ exam.id }}/sheets/blank" style="margin:0;">
+            <button class="btn btn-secondary btn-sm" type="submit" title="{{ _('sheets.blank.hint') }}">{{ _('sheets.blank.download') }}</button>
+          </form>
+        {% endif %}
+        <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/exports">{{ _('exams.detail.exports') }}</a>
+        <form method="get" action="/exams/{{ exam.id }}/portable-export" class="inline-export-options">
+          <label class="checkbox-inline">
+            <input type="checkbox" name="include_scan_files" value="1">
+            {{ _('packages.include_scan_files') }}
+          </label>
+          <span class="muted">{{ _('packages.scan_file_pii_warning') }}</span>
+          <button class="btn btn-secondary btn-sm" type="submit">{{ _('packages.export_session') }}</button>
+        </form>
+        <form method="post" action="/exams/{{ exam.id }}/archive"
+              data-confirm="{{ _('exams.archive_confirm') }}" style="margin:0;">
+          <button class="btn btn-secondary btn-sm" type="submit">{{ _('exams.action.archive') }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Advanced template details (collapsed by default) -->
+  <details class="panel">
+    <summary style="padding: var(--sp-4) var(--sp-5); cursor: pointer; font-weight: 600;">
+      {{ _('exams.detail.advanced') }}
+    </summary>
+    <div class="two-column" style="padding: 0 var(--sp-5) var(--sp-5);">
+      {% if exam.assessment_type == "peer_review" %}
+
+        <div>
+          <h3 style="font-size:14px; margin: var(--sp-3) 0;">{{ _('exams.detail.tables.competencies') }}</h3>
+          {% if exam.competencies %}
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ _('common.name') }}</th>
+                  <th>{{ _('common.description') }}</th>
+                  <th>{{ _('common.scale') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for comp in exam.competencies %}
+                  <tr>
+                    <td><strong>{{ comp.name }}</strong></td>
+                    <td class="text-sm muted">{{ comp.description or "—" }}</td>
+                    <td>{{ comp.min_score }} – {{ comp.max_score }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="muted text-sm">{{ _('exams.competencies.empty') }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <h3 style="font-size:14px; margin: var(--sp-3) 0;">{{ _('exams.detail.tables.physical_sheets') }}</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ _('exams.detail.tables.physical_sheets_no') }}</th>
+                <th>{{ _('common.name') }}</th>
+                <th>{{ _('exams.detail.tables.physical_sheets_required') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sheet in exam.physical_sheets %}
+                <tr>
+                  <td>{{ sheet.sheet_no }}</td>
+                  <td>{{ sheet.sheet_name }}</td>
+                  <td>{{ _('common.yes') if sheet.required else _('common.no') }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      {% else %}
+
+        <div>
+          <h3 style="font-size:14px; margin: var(--sp-3) 0;">{{ _('exams.detail.tables.physical_sheets') }}</h3>
+          {% if exam.physical_sheets %}
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ _('exams.detail.tables.physical_sheets_no') }}</th>
+                  <th>{{ _('common.name') }}</th>
+                  <th>{{ _('exams.detail.tables.physical_sheets_required') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for sheet in exam.physical_sheets %}
+                  <tr>
+                    <td>{{ sheet.sheet_no }}</td>
+                    <td>{{ sheet.sheet_name }}</td>
+                    <td>{{ _('common.yes') if sheet.required else _('common.no') }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="muted text-sm">—</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <h3 style="font-size:14px; margin: var(--sp-3) 0;">{{ _('exams.detail.tables.scoring_sections') }}</h3>
+          {% if exam.scoring_sections %}
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ _('exams.detail.tables.scoring_sections_section') }}</th>
+                  <th>{{ _('exams.detail.tables.scoring_sections_questions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for section in exam.scoring_sections %}
+                  <tr>
+                    <td>{{ section.name }}</td>
+                    <td>{{ section.questions|length }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="muted text-sm">—</p>
+          {% endif %}
+        </div>
+
+      {% endif %}
+    </div>
+  </details>
+
+{% endblock %}

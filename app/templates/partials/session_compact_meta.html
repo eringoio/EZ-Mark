@@ -1,0 +1,16 @@
+{#
+  Compact metadata line for a session/exam card: date · people count · type/level.
+  Expects `exam` (a MockExam) in context. Shared by exam_summary_card.html and dashboard.html
+  so the テスト管理 list and the home recent/review lists read the same way.
+#}
+<div class="summary-card-meta">
+  <span>{{ exam.exam_date or "—" }}</span>
+  <span>·</span>
+  <span>{{ _('common.people_count', count=exam.students|length) }}</span>
+  <span>·</span>
+  {% if exam.assessment_type == "peer_review" %}
+    <span>{{ _('exams.peer_review') }}</span>
+  {% else %}
+    <span>{{ _('exams.generic_test') }}</span>
+  {% endif %}
+</div>

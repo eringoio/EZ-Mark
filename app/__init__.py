@@ -1,0 +1,1 @@
+"""EZ Mark application package."""

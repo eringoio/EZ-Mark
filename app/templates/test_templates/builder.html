@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.name }} {{ _('builder.title') }} · EZ Mark{% endblock %}
+
+{% block head %}
+<script>
+window.EZ_MARK_I18N = {
+  builder: {
+    title: {{ _('builder.title')|tojson }},
+    loading: {{ _('builder.loading')|tojson }},
+    load_error: {{ _('builder.load_error')|tojson }},
+    no_sheets: {{ _('builder.no_sheets')|tojson }},
+    add_group: {{ _('builder.add_group')|tojson }},
+    problem_prefix: {{ _('builder.problem_prefix')|tojson }},
+    empty_sheet: {{ _('builder.empty_sheet')|tojson }},
+    sheet_name: {{ _('builder.sheet_name')|tojson }},
+    apply_to_sheet: {{ _('builder.apply_to_sheet')|tojson }},
+    apply: {{ _('common.apply')|tojson }},
+    student: {{ _('builder.paper.student')|tojson }},
+    name: {{ _('students.table.name')|tojson }},
+    date: {{ _('common.date')|tojson }},
+    questions_count: {{ _('builder.questions_count')|tojson }},
+    defaults: {{ _('builder.defaults')|tojson }},
+    add_question: {{ _('builder.add_question')|tojson }},
+    delete_group: {{ _('builder.delete_group')|tojson }},
+    question_number: {{ _('builder.question_number')|tojson }},
+    answer_choices: {{ _('builder.answer_choices')|tojson }},
+    start_new_problem_here: {{ _('builder.start_new_problem_here')|tojson }},
+    points_short: {{ _('builder.points_short')|tojson }},
+    section: {{ _('builder.section')|tojson }},
+    choices: {{ _('builder.choices')|tojson }},
+    custom: {{ _('builder.custom')|tojson }},
+    select_question_hint: {{ _('builder.select_question_hint')|tojson }},
+    question: {{ _('builder.question')|tojson }},
+    answer: {{ _('builder.answer')|tojson }},
+    unset: {{ _('builder.unset')|tojson }},
+    delete_question: {{ _('builder.delete_question')|tojson }},
+    save_error_unexpected: {{ _('builder.save_error_unexpected')|tojson }},
+    save_error: {{ _('builder.save_error')|tojson }},
+    saved: {{ _('builder.saved')|tojson }},
+    issues_more: {{ _('builder.issues_more')|tojson }},
+    assessment_types: {
+      generic_test: {{ _('exams.generic_test')|tojson }},
+      peer_review: {{ _('exams.peer_review')|tojson }}
+    }
+  }
+};
+</script>
+<script type="module" src="{{ url_for('static', path='/js/template-builder.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <section class="page-header template-builder-header">
+    <div>
+      <p class="eyebrow"><a href="/templates/{{ template.id }}" style="text-decoration:none;color:inherit;">{{ template.name }}</a></p>
+      <h1>{% if template.assessment_type == "generic_test" %}{{ _('builder.generic_title') }}{% else %}{{ _('builder.title') }}{% endif %}</h1>
+      <p class="muted">
+        {{ _('exams.' ~ template.assessment_type) }}
+      </p>
+    </div>
+    <div class="page-header-actions">
+      {% if template.questions and not issues %}
+        <a class="btn btn-primary" href="/templates/{{ template.id }}/runs/new">{{ _('templates.action.create_run') }}</a>
+      {% endif %}
+      <a class="btn btn-secondary" href="/templates/{{ template.id }}">{{ _('common.back') }}</a>
+      <button class="btn btn-primary" type="button" data-builder-save>{{ _('common.save') }}</button>
+    </div>
+  </section>
+
+  {% if request.query_params.get("saved") or saved %}
+    <div class="alert-success" role="status" data-builder-server-message><p>{{ _('builder.saved') }}</p></div>
+  {% endif %}
+  {% if errors %}
+    <div class="alert-error" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div>
+  {% endif %}
+  {% if issues %}
+    <div class="alert-error" role="alert">
+      {% for issue in issues[:8] %}<p>{{ issue.display_label }}: {{ issue.message }}</p>{% endfor %}
+      {% if issues|length > 8 %}<p>{{ _('builder.issues_more', count=issues|length - 8) }}</p>{% endif %}
+    </div>
+  {% endif %}
+
+  <div id="template-builder-app" data-template-id="{{ template.id }}">
+    <div class="panel"><p class="muted">{{ _('builder.loading') }}</p></div>
+  </div>
+{% endblock %}

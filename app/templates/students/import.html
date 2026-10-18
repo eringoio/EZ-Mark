@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('students.import_form.title') }}{% endblock %}
+
+{% block head %}
+<style>
+.si-input.si-invalid { border-color: var(--clr-danger, #dc2626); background: color-mix(in srgb, var(--clr-danger, #dc2626) 6%, transparent); }
+</style>
+<script>
+function addStudentRow() {
+  var tbody = document.getElementById('student-rows');
+  var first = tbody.querySelector('tr');
+  if (!first) return;
+  var row = first.cloneNode(true);
+  // Start from a clean, empty row: never inherit validation state from a submitted
+  // invalid first row (values, si-invalid classes, aria-invalid, inline errors).
+  row.querySelectorAll('input').forEach(function (inp) {
+    inp.value = '';
+    inp.classList.remove('si-invalid');
+    inp.removeAttribute('aria-invalid');
+  });
+  row.classList.remove('si-row-invalid');
+  row.querySelectorAll('.si-field-error').forEach(function (el) { el.remove(); });
+  tbody.appendChild(row);
+  row.querySelector('input').focus();
+}
+function removeRow(btn) {
+  var tbody = document.getElementById('student-rows');
+  if (tbody.querySelectorAll('tr').length > 1) {
+    btn.closest('tr').remove();
+  } else {
+    btn.closest('tr').querySelectorAll('input').forEach(function (inp) { inp.value = ''; });
+  }
+}
+document.addEventListener('DOMContentLoaded', function () {
+  var firstInvalid = document.querySelector('.si-input.si-invalid');
+  if (firstInvalid) { firstInvalid.focus(); }
+});
+</script>
+{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow"><a href="/exams/{{ exam.id }}" style="text-decoration:none;color:inherit;">{{ exam.name }}</a></p>
+      <h1>{{ _('students.import') }}</h1>
+      <p class="muted">{{ _('students.import_form.desc') }}</p>
+    </div>
+    <a class="btn btn-secondary" href="/exams/{{ exam.id }}/students/import-template.xlsx">
+      {{ _('students.import_form.download_template') }}
+    </a>
+  </section>
+
+  <!-- Manual entry table -->
+  <section class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-header">
+      <h2>{{ _('students.import_form.manual_entry') }}</h2>
+    </div>
+    <div style="padding: var(--sp-4) var(--sp-6);">
+      {% if errors %}
+        <div class="alert alert-error" role="alert" style="margin-bottom: var(--sp-4);">
+          <p style="font-weight:600;">{{ _('students.import_form.fix_errors') }}</p>
+          {% for e in errors %}<p>{{ e }}</p>{% endfor %}
+        </div>
+      {% endif %}
+      <form method="post" action="/exams/{{ exam.id }}/students/add-manual">
+        <table class="student-input-table">
+          <thead>
+            <tr>
+              <th>{{ _('students.import_form.col_id') }}</th>
+              <th>{{ _('students.import_form.col_name') }}</th>
+              <th>{{ _('students.import_form.col_class') }}</th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="student-rows">
+            {% if submitted_rows %}
+              {% for row in submitted_rows %}
+              <tr>
+                <td><input class="si-input{% if row.field_errors.student_number %} si-invalid{% endif %}" type="text" name="student_number" value="{{ row.student_number }}" placeholder="{{ _('students.import_form.col_id') }}"></td>
+                <td><input class="si-input{% if row.field_errors.name %} si-invalid{% endif %}" type="text" name="name" value="{{ row.name }}" placeholder="{{ _('students.import_form.col_name') }}"></td>
+                <td><input class="si-input{% if row.field_errors.class_name %} si-invalid{% endif %}" type="text" name="class_name" value="{{ row.class_name }}" placeholder="{{ _('students.import_form.col_class') }}"></td>
+                <td><button type="button" class="row-remove" onclick="removeRow(this)">&#x2715;</button></td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              {% for _i in range(5) %}
+              <tr>
+                <td><input class="si-input" type="text" name="student_number" placeholder="{{ _('students.import_form.col_id') }}"></td>
+                <td><input class="si-input" type="text" name="name" placeholder="{{ _('students.import_form.col_name') }}"></td>
+                <td><input class="si-input" type="text" name="class_name" placeholder="{{ _('students.import_form.col_class') }}"></td>
+                <td><button type="button" class="row-remove" onclick="removeRow(this)">&#x2715;</button></td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+          </tbody>
+        </table>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--sp-3);">
+          <button type="button" class="btn btn-secondary" onclick="addStudentRow()">+ {{ _('students.import_form.add_row') }}</button>
+          <button class="btn btn-primary" type="submit">{{ _('students.import_form.save_manual') }}</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- File upload section -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>{{ _('students.import_form.file_upload_header') }}</h2>
+    </div>
+    <div style="padding: var(--sp-4) var(--sp-6);">
+      <form
+        method="post"
+        action="/exams/{{ exam.id }}/students/import/preview"
+        enctype="multipart/form-data"
+      >
+        <div class="file-dropzone">
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+            </svg>
+          </div>
+          <p class="upload-title">{{ _('students.import_form.select_file') }}</p>
+          <input class="upload-file-input" name="file" type="file" accept=".csv,.xlsx" required>
+          <p class="upload-meta">{{ _('upload.accepted_types') }}: .csv, .xlsx</p>
+        </div>
+        <div class="upload-actions" style="margin-top: var(--sp-4);">
+          <a class="btn btn-secondary" href="/exams/{{ exam.id }}/students">{{ _('common.cancel') }}</a>
+          <button class="btn btn-primary" type="submit">{{ _('students.import_form.upload') }}</button>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

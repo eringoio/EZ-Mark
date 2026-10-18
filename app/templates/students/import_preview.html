@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('students.import_preview.title') }}{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('students.import_preview.header') }}</p>
+      <h1>{{ exam.name }}</h1>
+    </div>
+  </section>
+
+  {% if errors %}
+    <div class="alert-error" role="alert">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if preview and preview.missing_headers %}
+    <div class="alert-error" role="alert">
+      <p>{{ _('students.import_preview.missing_required', headers=preview.missing_headers|join(", ")) }}</p>
+    </div>
+  {% endif %}
+
+  {% if preview %}
+    <section class="metric-grid">
+      <article class="metric-card">
+        <p>{{ _('students.import_preview.valid_rows') }}</p>
+        <strong>{{ preview.valid_rows|length }}</strong>
+      </article>
+      <article class="metric-card">
+        <p>{{ _('students.import_preview.error_rows') }}</p>
+        <strong>{{ preview.error_rows|length }}</strong>
+      </article>
+    </section>
+
+    <p class="muted">{{ _('students.conflicts.notice') }}</p>
+    <form method="post" action="/exams/{{ exam.id }}/students/import/confirm">
+      <input type="hidden" name="import_payload" value="{{ payload }}">
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="setImportChoices('keep')">{{ _('students.conflicts.bulk_keep') }}</button>
+        <button type="button" class="btn btn-secondary" onclick="setImportChoices('update')">{{ _('students.conflicts.bulk_update') }}</button>
+        <button type="button" class="btn btn-secondary" onclick="setImportChoices('skip')">{{ _('students.conflicts.bulk_skip') }}</button>
+      </div>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>{{ _('students.import_preview.rows') }}</h2>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ _('students.import_preview.row_number') }}</th>
+            <th>{{ _('students.table.student_number') }}</th>
+            <th>{{ _('students.conflicts.existing_name') }}</th><th>{{ _('students.conflicts.imported_name') }}</th>
+            <th>{{ _('students.conflicts.existing_group') }}</th><th>{{ _('students.conflicts.imported_group') }}</th>
+            <th>{{ _('students.table.status') }}</th>
+            <th>{{ _('students.import_preview.message') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preview.rows %}
+            <tr>
+              <td>{{ row.row_number }}</td>
+              <td>{{ row.student_number or "—" }}</td>
+              <td>{{ row.existing_name or "—" }}</td><td>{{ row.name or "—" }}</td>
+              <td>{{ row.existing_group or "—" }}</td><td>{{ row.class_name or "—" }}</td>
+              <td><span class="status-badge">{{ _('students.conflicts.' ~ row.status) }}</span></td>
+              <td>{{ row.message }}
+                {% if row.is_valid %}
+                  {% if row.existing_id and row.existing_name != row.name %}
+                  <select name="name_{{ row.row_number }}" data-choice="name">
+                    <option value="keep">{{ _('students.conflicts.keep_name') }}</option>
+                    <option value="update">{{ _('students.conflicts.update_name') }}</option>
+                  </select>
+                  {% endif %}
+                  {% if row.existing_id and row.existing_group != row.class_name %}
+                  <select name="group_{{ row.row_number }}" data-choice="group">
+                    <option value="keep">{{ _('students.conflicts.keep_group') }}</option>
+                    <option value="import">{{ _('students.conflicts.import_group') }}</option>
+                  </select>
+                  {% endif %}
+                  <label><input type="checkbox" name="skip_{{ row.row_number }}" value="yes" data-choice="skip"> {{ _('students.conflicts.skip') }}</label>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <div class="form-actions standalone-actions">
+      <a class="button-secondary" href="/exams/{{ exam.id }}/students/import">{{ _('common.back') }}</a>
+      <button class="button-primary" type="submit" {% if not preview.valid_rows %}disabled{% endif %}>
+        {{ _('students.import_preview.import_valid_rows') }}
+      </button>
+    </div>
+    </form>
+    <script>
+    function setImportChoices(mode) {
+      document.querySelectorAll("[data-choice]").forEach(el => {
+        if (el.dataset.choice === "skip") el.checked = mode === "skip";
+        else el.value = mode === "update" ? (el.dataset.choice === "name" ? "update" : "import") : "keep";
+      });
+    }
+    </script>
+  {% endif %}
+{% endblock %}

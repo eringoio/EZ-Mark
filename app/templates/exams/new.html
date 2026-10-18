@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('exams.new') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('exams.new') }}</p>
+      <h1>{{ _('exams.create_header') }}</h1>
+    </div>
+  </section>
+
+  {% if errors %}
+    <div class="alert-error" role="alert">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form class="form-panel" method="post" action="/assessments">
+    <label>
+      {{ _('exams.name') }}
+      <input name="name" value="{{ form.name if form else '' }}" required>
+    </label>
+
+    <fieldset>
+      <legend>{{ _('exams.assessment_type') }}</legend>
+      <label class="radio-card">
+        <input type="radio" name="assessment_type" value="generic_test" checked>
+        <span>
+          <strong>{{ _('exams.generic_test') }}</strong>
+          {{ _('exams.generic_test_desc') }}
+        </span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="assessment_type" value="peer_review">
+        <span>
+          <strong>{{ _('exams.peer_review') }}</strong>
+          {{ _('exams.peer_review_desc') }}
+        </span>
+      </label>
+    </fieldset>
+
+    <label>
+      {{ _('common.date') }}
+      <input name="exam_date" type="date" value="{{ form.exam_date if form else '' }}">
+    </label>
+
+    <fieldset>
+      <legend>{{ _('exams.question_structure') }}</legend>
+      <label class="radio-card">
+        <input type="radio" name="numbering_mode" value="continuous" checked>
+        <span>
+          <strong>{{ _('exams.continuous') }}</strong>
+          {{ _('exams.continuous_desc') }}
+        </span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="numbering_mode" value="reset_per_problem">
+        <span>
+          <strong>{{ _('exams.reset_per_problem') }}</strong>
+          {{ _('exams.reset_per_problem_desc') }}
+        </span>
+      </label>
+    </fieldset>
+
+    <div class="form-actions">
+      <a class="button-secondary" href="/exams">{{ _('common.cancel') }}</a>
+      <button class="button-primary" type="submit">{{ _('exams.new') }}</button>
+    </div>
+  </form>
+{% endblock %}

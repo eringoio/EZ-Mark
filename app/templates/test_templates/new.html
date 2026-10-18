@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('templates.create_header') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow"><a href="/templates" style="text-decoration:none;color:inherit;">{{ _('nav.templates') }}</a></p>
+      <h1>{{ _('templates.create_header') }}</h1>
+      <p class="page-subtitle">{{ _('templates.create_desc') }}</p>
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-error" role="alert">
+      {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="template-editor-layout">
+
+    <!-- LEFT: settings form -->
+    <form id="template-new-form" class="form-panel template-editor-form"
+          method="post" action="/templates/new" data-reveal-group>
+
+      <div class="form-field">
+        <label class="form-label" for="name">{{ _('templates.name') }}</label>
+        <input class="form-input" id="name" name="name"
+               value="{{ form.name if form else '' }}" required
+               placeholder="{{ _('templates.name_placeholder') }}"
+               oninput="updatePreviewName(this.value)">
+      </div>
+
+      <!-- Test type selector -->
+      <fieldset style="border:0; padding:0; margin:0;">
+        <legend class="form-label">{{ _('exams.assessment_type') }}</legend>
+        <div style="display:flex; flex-direction:column; gap: var(--sp-3); margin-top: var(--sp-2);">
+
+          <label class="radio-card" style="cursor:pointer;">
+            <input type="radio" name="assessment_type" value="generic_test"
+                   {% if not form or form.assessment_type == "generic_test" %}checked{% endif %}
+                   data-reveal-trigger="generic_test"
+                   onchange="updatePreviewType('generic_test')">
+            <div class="radio-card-body">
+              <strong>{{ _('exams.generic_test') }}</strong>
+              <span>{{ _('exams.generic_test_desc') }}</span>
+            </div>
+          </label>
+
+          <label class="radio-card" style="cursor:pointer;">
+            <input type="radio" name="assessment_type" value="peer_review"
+                   {% if form and form.assessment_type == "peer_review" %}checked{% endif %}
+                   data-reveal-trigger="peer_review"
+                   onchange="updatePreviewType('peer_review')">
+            <div class="radio-card-body">
+              <strong>{{ _('exams.peer_review') }}</strong>
+              <span>{{ _('exams.peer_review_desc') }}</span>
+            </div>
+          </label>
+
+        </div>
+      </fieldset>
+
+      <div class="form-field">
+        <label class="form-label" for="template_description">{{ _('templates.description') }}</label>
+        <textarea class="form-input" id="template_description" name="template_description"
+                  rows="2" style="resize:vertical;">{{ form.template_description if form and form.template_description else '' }}</textarea>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-secondary" href="/templates">{{ _('common.cancel') }}</a>
+        <button class="btn btn-primary" type="submit">{{ _('templates.create') }}</button>
+      </div>
+    </form>
+
+    <!-- RIGHT: visual sheet preview -->
+    <div class="template-preview-panel">
+      <div class="template-preview-header">
+        <span class="template-preview-badge" id="preview-type-badge">Test</span>
+        <span class="muted text-sm" id="preview-name-label">{{ form.name if form and form.name else _('templates.preview_untitled') }}</span>
+      </div>
+
+      <!-- Generic test preview -->
+      <div id="preview-generic" class="sheet-preview-root">
+        <div class="sheet-preview-label">{{ _('templates.preview.generic_note') }}</div>
+        <div class="sheet-preview-single">
+          <div class="sheet-preview-field">
+            <span class="sheet-preview-field-label">{{ _('templates.preview.student_no') }}</span>
+            <span class="sheet-preview-field-dots"></span>
+          </div>
+          <div class="sheet-preview-field">
+            <span class="sheet-preview-field-label">{{ _('templates.preview.name') }}</span>
+            <span class="sheet-preview-field-dots"></span>
+          </div>
+          <div class="sheet-preview-bubbles" id="preview-generic-bubbles">
+            <!-- Populated by JS: rows of 1-5 bubbles -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Peer review preview -->
+      <div id="preview-peer" class="sheet-preview-root" hidden>
+        <div class="sheet-preview-label">{{ _('templates.preview.peer_note') }}</div>
+        <div class="sheet-preview-peer">
+          <div class="sheet-preview-peer-header">
+            <span class="sheet-preview-field-label">{{ _('peer_review.anonymous') }}</span>
+            <p class="muted text-xs" style="margin:4px 0 0;">{{ _('peer_review.reusable_note') }}</p>
+          </div>
+          <table class="sheet-preview-peer-table">
+            <thead>
+              <tr>
+                <th>{{ _('templates.preview.classmate') }}</th>
+                <th>C1 (1–5)</th>
+                <th>C2 (1–5)</th>
+                <th>C3 (1–5)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>{{ _('peer_review.target') }} 1</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td></tr>
+              <tr><td>{{ _('peer_review.target') }} 2</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td></tr>
+              <tr><td>{{ _('peer_review.target') }} 3</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td><td class="peer-bubble-row">① ② ③ ④ ⑤</td></tr>
+              <tr><td class="muted text-xs" colspan="4">...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    <!-- /preview -->
+  </div>
+{% endblock %}
+
+{% block head %}
+<style>
+/* Template editor two-column layout */
+.template-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 560px) 1fr;
+  gap: var(--sp-6);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .template-editor-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.template-editor-form {
+  max-width: none;
+}
+.template-preview-panel {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-xs);
+  position: sticky;
+  top: var(--sp-6);
+}
+.template-preview-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--clr-border-subtle);
+}
+.template-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  background: var(--clr-primary-soft);
+  color: var(--clr-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+.sheet-preview-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.sheet-preview-root[hidden] {
+  display: none !important;
+}
+.sheet-preview-label {
+  font-size: 12px;
+  color: var(--clr-muted);
+  font-style: italic;
+}
+.sheet-preview-sheets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.sheet-preview-card {
+  border: 1.5px dashed var(--clr-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-3) var(--sp-4);
+  background: #f9fafc;
+}
+.sheet-preview-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--clr-text);
+  margin-bottom: var(--sp-2);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.sheet-preview-card-title .sheet-icon {
+  width: 20px;
+  height: 20px;
+  background: var(--clr-primary-soft);
+  color: var(--clr-primary);
+  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+.sheet-bubble-row {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: var(--sp-1);
+}
+.bubble {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #b0bec5;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #90a4ae;
+}
+.sheet-preview-single {
+  border: 1.5px dashed var(--clr-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-3) var(--sp-4);
+  background: #f9fafc;
+}
+.sheet-preview-field {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  font-size: 12px;
+}
+.sheet-preview-field-label {
+  font-weight: 600;
+  color: var(--clr-text-2);
+  min-width: 70px;
+}
+.sheet-preview-field-dots {
+  flex: 1;
+  border-bottom: 1px dotted var(--clr-border);
+  height: 12px;
+}
+.sheet-preview-bubbles {
+  margin-top: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sheet-preview-bubble-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sheet-preview-q-label {
+  font-size: 10px;
+  color: var(--clr-muted);
+  min-width: 24px;
+  font-weight: 600;
+}
+.sheet-preview-peer {
+  border: 1.5px dashed var(--clr-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-3) var(--sp-4);
+  background: #f9fafc;
+}
+.sheet-preview-peer-header {
+  font-size: 12px;
+  margin-bottom: var(--sp-2);
+}
+.sheet-preview-peer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.sheet-preview-peer-table th,
+.sheet-preview-peer-table td {
+  padding: 4px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--clr-border-subtle);
+}
+.sheet-preview-peer-table th {
+  font-weight: 700;
+  color: var(--clr-muted);
+  background: var(--clr-surface-2);
+}
+.peer-bubble-row {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--clr-text-2);
+}
+</style>
+<script>
+function renderGenericBubbles() {
+  const container = document.getElementById('preview-generic-bubbles');
+  if (!container) return;
+  container.innerHTML = Array.from({length: 8}, (_, i) =>
+    `<div class="sheet-preview-bubble-row">
+      <span class="sheet-preview-q-label">${i + 1}</span>
+      ${Array.from({length: 4}, (_, j) => `<span class="bubble">${j + 1}</span>`).join('')}
+    </div>`
+  ).join('');
+}
+
+function updatePreviewType(type) {
+  document.getElementById('preview-generic').hidden = type !== 'generic_test';
+  document.getElementById('preview-peer').hidden = type !== 'peer_review';
+  const badge = document.getElementById('preview-type-badge');
+  if (type === 'generic_test') {
+    badge.textContent = 'Standard Test';
+    badge.style.background = 'var(--clr-success-soft)';
+    badge.style.color = 'var(--clr-success-text)';
+  } else {
+    badge.textContent = 'Peer Evaluation';
+    badge.style.background = 'var(--clr-purple-soft)';
+    badge.style.color = 'var(--clr-purple-text)';
+  }
+}
+
+function updatePreviewName(name) {
+  const el = document.getElementById('preview-name-label');
+  if (el) el.textContent = name || '{{ _("templates.preview_untitled") }}';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialise from current form state
+  const checkedType = document.querySelector('input[name="assessment_type"]:checked');
+  const initialType = checkedType ? checkedType.value : 'generic_test';
+  renderGenericBubbles();
+  updatePreviewType(initialType);
+});
+</script>
+{% endblock %}

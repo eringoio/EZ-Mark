@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('templates.edit_header') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('templates.detail.eyebrow') }}</p>
+      <h1>{{ _('templates.edit_header') }}</h1>
+    </div>
+  </section>
+
+  {% if errors %}
+    <div class="alert-error" role="alert">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form class="form-panel" method="post" action="/templates/{{ template.id }}/edit">
+    <label>
+      {{ _('templates.name') }}
+      <input name="name" value="{{ template.name }}" required>
+    </label>
+
+    <label>
+      {{ _('templates.description') }}
+      <textarea name="template_description" rows="3">{{ template.template_description or '' }}</textarea>
+    </label>
+
+    {% if template.pass_mark_value is not none %}
+      <p class="muted text-sm">
+        {{ _('templates.pass_mark_label') }}:
+        {{ template.pass_mark_value|score_text }}
+        {{ _('templates.pass_mark_points_short') if template.pass_mark_type == "points" else '%' }}
+      </p>
+    {% endif %}
+
+    {% if template.scoring_sections %}
+      <fieldset>
+        <legend>{{ _('templates.detail.scoring_sections') }}</legend>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ _('templates.detail.section') }}</th>
+              <th>{{ _('templates.detail.per_section') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for section in template.scoring_sections %}
+              <tr>
+                <td>{{ section.name }}</td>
+                <td>{{ section.questions|length }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </fieldset>
+    {% endif %}
+
+    <fieldset>
+      <legend>{{ _('templates.pass_mark_legend') }}</legend>
+      <label>
+        {{ _('templates.pass_mark_type') }}
+        <select name="pass_mark_type">
+          <option value="" {% if template.pass_mark_type is none %}selected{% endif %}>{{ _('templates.pass_mark_none') }}</option>
+          <option value="points" {% if template.pass_mark_type == "points" %}selected{% endif %}>{{ _('templates.pass_mark_points') }}</option>
+          <option value="percentage" {% if template.pass_mark_type == "percentage" %}selected{% endif %}>{{ _('templates.pass_mark_percentage') }}</option>
+        </select>
+      </label>
+      <label>
+        {{ _('templates.pass_mark_value') }}
+        <input type="number" name="pass_mark_value" value="{{ template.pass_mark_value if template.pass_mark_value is not none }}" step="0.5" min="0">
+      </label>
+    </fieldset>
+
+    <div class="form-actions">
+      <a class="button-secondary" href="/templates/{{ template.id }}">{{ _('common.cancel') }}</a>
+      <button class="button-primary" type="submit">{{ _('templates.save') }}</button>
+    </div>
+  </form>
+{% endblock %}

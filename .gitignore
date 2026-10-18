@@ -1,0 +1,72 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*secret*
+*.token
+venv/
+.venv/
+env/
+venv-win/
+.venv-win/
+.venv-build/
+
+# Data folder (contains SQLite DB and sensitive student scans/PDFs)
+data/
+data-demo/
+app.sqlite
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.db
+.runtime
+
+# Private working data (never commit rosters, scans, or answer keys)
+docs/workdata/
+
+# Logs
+logs/
+*.log
+
+# Backups / private generated files
+backups/
+private/
+storage/logs/
+storage/app/private/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Dependencies / builds
+node_modules/
+vendor/
+dist/
+dist-windows/
+build/
+.cache/
+
+# Python / QA caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local AI/IDE agent configs
+.agents/
+.antigravitycli/
+.claude/
+.codex/
+.idea/
+.vscode/
+.gitleaks/
+
+# Misc
+docs/todo/

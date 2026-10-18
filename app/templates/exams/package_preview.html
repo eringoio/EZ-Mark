@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('packages.preview_title') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">EZ Mark</p>
+      <h1>{{ _('packages.preview_title') }}</h1>
+    </div>
+  </div>
+
+  <div class="two-column">
+    <div class="panel">
+      <div class="panel-header"><h2>{{ _('packages.card_template') }}</h2></div>
+      <div class="detail-grid">
+        <div><dt>{{ _('packages.field_name') }}</dt><dd>{{ preview.template.name }}</dd></div>
+        <div><dt>{{ _('packages.field_type') }}</dt><dd>{{ _('exams.' ~ preview.template.assessment_type) }}</dd></div>
+        <div><dt>{{ _('packages.field_questions') }}</dt><dd>{{ preview.template.question_count }}</dd></div>
+        <div><dt>{{ _('packages.field_competencies') }}</dt><dd>{{ preview.template.competency_count }}</dd></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h2>{{ _('packages.card_session') }}</h2></div>
+      <div class="detail-grid">
+        <div><dt>{{ _('packages.field_name') }}</dt><dd>{{ preview.session.name }}</dd></div>
+        <div><dt>{{ _('packages.field_date') }}</dt><dd>{{ preview.session.date or "—" }}</dd></div>
+        <div><dt>{{ _('packages.field_students') }}</dt><dd>{{ preview.session.student_count }}</dd></div>
+        <div><dt>{{ _('packages.field_results') }}</dt><dd>{{ preview.session.result_count }}</dd></div>
+        {% if preview.session.assessment_type == "peer_review" %}
+          <div><dt>{{ _('packages.field_ratings') }}</dt><dd>{{ preview.session.rating_count }}</dd></div>
+        {% endif %}
+        <div><dt>{{ _('packages.field_scan_files') }}</dt><dd>{{ _('common.yes') if preview.session.scan_files_included else _('common.no') }}</dd></div>
+        <div><dt>{{ _('packages.field_archived_source') }}</dt><dd>{{ _('common.yes') if preview.session.archived_source else _('common.no') }}</dd></div>
+      </div>
+    </div>
+  </div>
+
+  {% if preview.session.archived_source %}
+    <p class="muted text-sm">{{ _('packages.scan_files_excluded_archived') }}</p>
+  {% endif %}
+
+  <form method="post" action="/sessions/import-package/confirm" style="margin-top: var(--sp-4);">
+    <input type="hidden" name="token" value="{{ token }}">
+    <div class="form-actions">
+      <a class="button-secondary" href="/sessions/import-package">{{ _('packages.preview_cancel') }}</a>
+      <button class="button-primary" type="submit">{{ _('packages.preview_confirm') }}</button>
+    </div>
+  </form>
+{% endblock %}

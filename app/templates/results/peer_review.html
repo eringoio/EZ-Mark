@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exam.name }} · {{ _('peer_review.view_results') }}{% endblock %}
+
+{% block head %}
+<style>
+.pr-bar { display:inline-block; height:8px; border-radius:999px; background:var(--clr-surface-3,#e5e7eb); width:120px; vertical-align:middle; overflow:hidden; }
+.pr-bar > span { display:block; height:100%; background:var(--clr-primary); }
+.pr-score-cell { display:flex; align-items:center; gap:8px; }
+.pr-muted-code { color:var(--clr-muted); font-size:11px; }
+.pr-rank { font-weight:700; color:var(--clr-muted); width:2.5em; text-align:right; }
+.pr-comp-card { padding:var(--sp-3) var(--sp-4); border:1px solid var(--clr-border); border-radius:var(--r-lg); }
+.pr-bar-row { display:grid; grid-template-columns: 1fr 130px 3em; align-items:center; gap:8px; padding:2px 0; font-size:13px; }
+.pr-badge { display:inline-block; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:700; }
+.pr-badge.small { background:#dcfce7; color:#166534; }
+.pr-badge.higher { background:#fef3c7; color:#92400e; }
+details.pr-details > summary { cursor:pointer; font-weight:600; padding:var(--sp-2) 0; }
+.pr-comp-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:var(--sp-3); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set summary = insights.summary %}
+{% set max_score = insights.visual_bars.max_score or 5 %}
+{% set has_results = insights.has_results %}
+{% set base = "/exams/" ~ exam.id ~ "/peer-review" %}
+
+<section class="page-header">
+  <div>
+    <p class="eyebrow">{{ _('peer_review.anonymous') }}</p>
+    <h1>{{ exam.name }}</h1>
+    <p class="muted">{{ _('results.subtitle.peer_review') }}</p>
+  </div>
+  <div class="actions">
+      <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/all.xlsx">{{ _('display_export.all') }}</a>
+    <form method="post" action="{{ base }}/results/recalculate" style="margin:0;">
+      <button class="btn btn-primary" type="submit">{{ _('peer_review.recalculate') }}</button>
+    </form>
+    <a class="btn btn-secondary" href="{{ base }}/exports/summary.xlsx">{{ _('peer_review.results.export') }} (.xlsx)</a>
+    <a class="btn btn-secondary" href="{{ base }}/review">{{ _('peer_review.review_marks') }}</a>
+  </div>
+</section>
+
+{% if not has_results %}
+  <div class="empty-state" style="padding: var(--sp-10) var(--sp-8);">
+    <h3>{{ _('peer_review.results_empty') }}</h3>
+    <p>{{ _('peer_review.results_empty_desc') }}</p>
+    <form method="post" action="{{ base }}/results/recalculate">
+      <button class="btn btn-primary" type="submit">{{ _('peer_review.recalculate') }}</button>
+    </form>
+  </div>
+{% else %}
+
+<!-- A. Summary cards -->
+<section class="metric-grid" style="margin-bottom:var(--sp-5);">
+  <div class="metric-card"><span>{{ _('peer_review.results.students_reviewed') }}</span><strong>{{ summary.students_reviewed }}</strong></div>
+  <div class="metric-card"><span>{{ _('peer_review.results.anonymous_ratings') }}</span><strong>{{ summary.total_anonymous_ratings }}</strong></div>
+  <div class="metric-card"><span>{{ _('peer_review.results.rater_groups') }}</span><strong>{{ summary.group_count }}</strong></div>
+  <div class="metric-card"><span>{{ _('peer_review.results.class_average') }}</span><strong>{{ "%.2f"|format(summary.class_average) if summary.class_average is not none else "—" }}</strong></div>
+  <div class="metric-card"><span>{{ _('peer_review.results.needs_review') }}</span><strong>{{ summary.needs_review_count }}</strong></div>
+</section>
+
+<!-- B. Main ranking -->
+{% if insights.combined_ranking %}
+  {% set main_rows = insights.combined_ranking %}
+{% elif insights.group_rankings %}
+  {% set main_rows = (insights.group_rankings|selectattr('rows')|map(attribute='rows')|list|first) or [] %}
+{% else %}
+  {% set main_rows = [] %}
+{% endif %}
+<section class="panel" style="margin-bottom:var(--sp-5);">
+  <div class="panel-header"><h2>{{ _('peer_review.results.ranking_title') }}</h2></div>
+  <div class="table-wrap">
+    <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/ranking.xlsx">{{ _('display_export.button') }}</a>
+      <table class="data-table" data-export-key="ranking" data-export-title="{{ _('peer_review.results.ranking_title') }}">
+      <thead>
+        <tr>
+          <th style="width:3em;" data-export-number="0">{{ _('peer_review.results.rank') }}</th>
+          <th>{{ _('peer_review.results.student') }}</th>
+          <th data-export-number="0.00">{{ _('peer_review.results.final_score') }}</th>
+          <th style="width:5em;" data-export-number="0">{{ _('peer_review.results.ratings') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in main_rows %}
+          {% set score = row.final_score if row.final_score is defined else row.average %}
+          {% set count = row.total_rating_count if row.total_rating_count is defined else row.rating_count %}
+          <tr>
+            <td class="pr-rank">{{ row.rank }}</td>
+            <td>
+              {{ row.student.name if row.student else "—" }}
+              {% if row.student %}<span class="pr-muted-code">{{ row.student.student_number }}</span>{% endif %}
+            </td>
+            <td>
+              <div class="pr-score-cell">
+                <span class="pr-bar"><span style="width: {{ ((score or 0) / max_score * 100)|round(1) }}%"></span></span>
+                <strong>{{ "%.2f"|format(score) if score is not none else "—" }}</strong>
+              </div>
+            </td>
+            <td>{{ count }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="muted">{{ _('peer_review.results.no_results_yet') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- C. Group comparison -->
+{% if summary.group_count > 1 and insights.side_by_side %}
+<section class="panel" style="margin-bottom:var(--sp-5);">
+  <div class="panel-header"><h2>{{ _('peer_review.results.group_comparison_title') }}</h2></div>
+  <div class="table-wrap">
+    <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/comparison.xlsx">{{ _('display_export.button') }}</a>
+      <table class="data-table" data-export-key="comparison" data-export-title="{{ _('peer_review.results.group_comparison_title') }}">
+      <thead>
+        <tr>
+          <th>{{ _('peer_review.results.student') }}</th>
+          {% for group_name in summary.group_names %}<th data-export-number="0.00">{{ _('peer_review.results.group_average', group=group_name) }}</th>{% endfor %}
+          <th data-export-number="0.00">{{ _('peer_review.results.difference') }}</th>
+          <th>{{ _('display_export.classification') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in insights.side_by_side %}
+        <tr>
+          <td>{{ row.student.name if row.student else "—" }}</td>
+          {% for group in row.groups %}
+          <td>{{ "%.2f"|format(group.average) if group.average is not none else "—" }}</td>
+          {% endfor %}
+          <td>{{ "%.2f"|format(row.difference) if row.difference is not none else "—" }}</td>
+          <td>
+            {% if row.difference is not none %}
+              {% if row.difference < 0.5 %}
+                <span class="pr-badge small">{{ _('peer_review.results.badge_small_diff') }}</span>
+              {% elif row.leader_name %}
+                <span class="pr-badge higher">{{ _('peer_review.results.badge_group_higher', group=row.leader_name) }}</span>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">{{ _('peer_review.results.no_group_results') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<!-- D. Competency section (compact bars, top 10) -->
+{% if insights.competency_rankings %}
+<section class="panel" style="margin-bottom:var(--sp-5);">
+  <div class="panel-header"><h2>{{ _('peer_review.results.competency_title') }}</h2></div>
+  <div class="panel-body pr-comp-grid">
+    {% for block in insights.competency_rankings %}
+      {% if insights.form and insights.form.combine_groups and block.combined_rows %}
+        {% set comp_rows = block.combined_rows %}
+      {% else %}
+        {% set comp_rows = (block.group_rankings|selectattr('rows')|map(attribute='rows')|list|first) or [] %}
+      {% endif %}
+      <div class="pr-comp-card">
+        <h3 style="margin:0 0 var(--sp-2);">{{ block.competency.name }}</h3>
+        {% for row in comp_rows[:10] %}
+          <div class="pr-bar-row">
+            <span>{{ row.student.name if row.student else "—" }}</span>
+            <span class="pr-bar"><span style="width: {{ ((row.average or 0) / max_score * 100)|round(1) }}%"></span></span>
+            <strong style="text-align:right;">{{ "%.2f"|format(row.average) if row.average is not none else "—" }}</strong>
+          </div>
+        {% else %}
+          <p class="muted text-sm">{{ _('peer_review.results.no_results_yet') }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- E. Detailed/raw tables (collapsed) -->
+<details class="pr-details panel" style="padding:var(--sp-3) var(--sp-5);">
+  <summary>{{ _('peer_review.results.details_title') }}</summary>
+  <p class="muted text-sm">{{ _('peer_review.results.details_hint') }}</p>
+
+  {% if insights.form and insights.form.combine_groups and insights.combined_ranking %}
+  <h3>{{ _('peer_review.results.ranking_title') }}</h3>
+  <div class="table-wrap">
+    <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/combined-detail.xlsx">{{ _('display_export.button') }}</a>
+      <table class="data-table" data-export-key="combined-detail" data-export-title="{{ _('peer_review.results.details_title') }}">
+      <thead>
+        <tr><th data-export-number="0">{{ _('peer_review.results.rank') }}</th><th>{{ _('peer_review.results.student') }}</th><th data-export-number="0.00">{{ _('peer_review.results.final_score') }}</th><th data-export-number="0">{{ _('peer_review.results.ratings') }}</th></tr>
+      </thead>
+      <tbody>
+        {% for row in insights.combined_ranking %}
+        <tr>
+          <td>{{ row.rank }}</td>
+          <td>{{ row.student.name if row.student else "—" }} <span class="pr-muted-code">{{ row.student.student_number if row.student else "" }}</span></td>
+          <td>{{ "%.2f"|format(row.final_score) if row.final_score is not none else "—" }}</td>
+          <td>{{ row.total_rating_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% for section in insights.group_rankings %}
+  <h3>{{ section.group.name }}</h3>
+  <div class="table-wrap">
+    <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/group-{{ section.group.id }}.xlsx">{{ _('display_export.button') }}</a>
+      <table class="data-table" data-export-key="group-{{ section.group.id }}" data-export-title="{{ section.group.name }}">
+      <thead>
+        <tr>
+          <th data-export-number="0">{{ _('peer_review.results.rank') }}</th><th>{{ _('peer_review.results.student') }}</th><th data-export-number="0.00">{{ _('peer_review.results.final_score') }}</th><th data-export-number="0">{{ _('peer_review.results.ratings') }}</th>
+          {% for item in (section.rows[0].competencies if section.rows else []) %}<th data-export-number="0.00">{{ item.competency.name }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in section.rows %}
+        <tr>
+          <td>{{ row.rank }}</td>
+          <td>{{ row.student.name if row.student else "—" }} <span class="pr-muted-code">{{ row.student.student_number if row.student else "" }}</span></td>
+          <td>{{ "%.2f"|format(row.average) if row.average is not none else "—" }}</td>
+          <td>{{ row.rating_count }}</td>
+          {% for item in row.competencies %}<td>{{ "%.2f"|format(item.average) if item.average is not none else "—" }}</td>{% endfor %}
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">{{ _('peer_review.results.no_group_results') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</details>
+{% endif %}
+{% endblock %}

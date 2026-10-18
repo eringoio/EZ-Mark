@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% set is_new = mode == "new" %}
+{% set form_title = _('students.add_manual') if is_new else _('students.edit_student') %}
+
+{% block title %}{{ form_title }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <p class="muted">{{ _('students.conflicts.notice' if exam else 'students.conflicts.global_notice') }}</p>
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('nav.students') }}</p>
+      <h1>{{ form_title }}</h1>
+      {% if exam %}
+        <p class="muted">{{ exam.name }}</p>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if errors %}
+    <div class="alert-error" role="alert">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if exam %}
+    {% set action = "/exams/" ~ exam.id ~ "/students/new" if is_new else "/exams/" ~ exam.id ~ "/students/" ~ student.id ~ "/edit" %}
+    {% set cancel_url = "/exams/" ~ exam.id ~ "/students" %}
+  {% else %}
+    {% set action = "/students/" ~ student.id ~ "/edit" %}
+    {% set cancel_url = "/students" %}
+  {% endif %}
+
+  <form class="form-panel" method="post" action="{{ action }}">
+    <label>
+      {{ _('students.table.student_number') }}
+      <input name="student_number" value="{{ student.student_number if student else '' }}" required>
+    </label>
+
+    <label>
+      {{ _('students.table.name') }}
+      <input name="name" value="{{ student.name if student else '' }}" required>
+    </label>
+
+    <label>
+      {{ _('students.table.class') }}
+      <input name="class_name" value="{{ link.group_name if link else (student.class_name if student else '') }}" required>
+    </label>
+
+    {% if exam %}
+      <label>
+        {{ _('students.table.seat_order') }}
+        <input type="number" name="seat_order" value="{{ link.seat_order if link and link.seat_order is not none else '' }}" min="1">
+      </label>
+    {% endif %}
+
+    <label class="checkbox-label">
+      <input type="checkbox" name="active" value="true" {% if is_new or (student and student.active) %}checked{% endif %}>
+      {{ _('students.active') }}
+    </label>
+
+    <div class="form-actions">
+      <a class="button-secondary" href="{{ cancel_url }}">{{ _('common.cancel') }}</a>
+      <button class="button-primary" type="submit">{{ _('common.save') if not is_new else _('common.create') }}</button>
+    </div>
+  </form>
+{% endblock %}

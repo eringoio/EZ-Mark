@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('settings.title') }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="eyebrow">{{ _('settings.eyebrow') }}</p>
+    <h1>{{ _('settings.header') }}</h1>
+    <p class="page-subtitle">{{ _('settings.intro') }}</p>
+  </div>
+</div>
+
+{% if request.query_params.get('saved') %}
+  <div class="alert-success" role="status" data-autodismiss="3500" style="margin-bottom:var(--sp-4);">
+    {{ _('settings.saved') }}
+  </div>
+{% endif %}
+{% if request.query_params.get('reset') %}
+  <div class="alert-success" role="status" data-autodismiss="3500" style="margin-bottom:var(--sp-4);">
+    {{ _('settings.reset_done') }}
+  </div>
+{% endif %}
+
+<div class="omr-settings-layout">
+
+  <!-- LEFT: settings form -->
+  <form method="post" class="omr-form">
+
+    <!-- Detection -->
+    <section class="omr-section">
+      <div class="omr-section-head">
+        <h2>{{ _('settings.detection.header') }}</h2>
+        <p class="muted">{{ _('settings.detection.desc') }}</p>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="preset">{{ _('settings.detection.preset') }}</label>
+        <select class="form-select" id="preset" name="preset" onchange="applyPreset()">
+          <option value="standard" {% if settings.preset == "standard" %}selected{% endif %}>{{ _('settings.detection.preset_standard') }}</option>
+          <option value="light_pencil" {% if settings.preset == "light_pencil" %}selected{% endif %}>{{ _('settings.detection.preset_light') }}</option>
+          <option value="strict" {% if settings.preset == "strict" %}selected{% endif %}>{{ _('settings.detection.preset_strict') }}</option>
+          <option value="custom" {% if settings.preset == "custom" %}selected{% endif %}>{{ _('settings.detection.preset_custom') }}</option>
+        </select>
+        <p class="omr-help">{{ _('settings.detection.preset_help') }}</p>
+        <p class="omr-help omr-preset-locked" id="preset-locked-note" hidden>{{ _('settings.detection.preset_locked') }}</p>
+      </div>
+
+      <div class="omr-field-grid" id="detection-fields">
+        <div class="form-field">
+          <label class="form-label" for="mark_threshold">{{ _('settings.detection.mark_threshold') }}</label>
+          <input class="form-input" type="number" step="0.01" min="0" max="1"
+                 id="mark_threshold" name="mark_threshold"
+                 value="{{ '%.2f'|format(settings.mark_threshold) }}" oninput="updatePreview()">
+          <p class="omr-help">{{ _('settings.detection.mark_threshold_help') }}</p>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="weak_threshold">{{ _('settings.detection.weak_threshold') }}</label>
+          <input class="form-input" type="number" step="0.01" min="0" max="1"
+                 id="weak_threshold" name="weak_threshold"
+                 value="{{ '%.2f'|format(settings.weak_threshold) }}" oninput="updatePreview()">
+          <p class="omr-help">{{ _('settings.detection.weak_threshold_help') }}</p>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="min_gap_between_top_two">{{ _('settings.detection.min_gap') }}</label>
+          <input class="form-input" type="number" step="0.01" min="0" max="1"
+                 id="min_gap_between_top_two" name="min_gap_between_top_two"
+                 value="{{ '%.2f'|format(settings.min_gap_between_top_two) }}" oninput="updatePreview()">
+          <p class="omr-help">{{ _('settings.detection.min_gap_help') }}</p>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="dark_pixel_threshold">{{ _('settings.detection.dark_pixel') }}</label>
+          <input class="form-input" type="number" step="1" min="1" max="254"
+                 id="dark_pixel_threshold" name="dark_pixel_threshold"
+                 value="{{ settings.dark_pixel_threshold }}" oninput="updatePreview()">
+          <p class="omr-help">{{ _('settings.detection.dark_pixel_help') }}</p>
+        </div>
+      </div>
+
+      <!-- drift is not controlled by presets -->
+      <div class="form-field">
+        <label class="form-label" for="local_drift_search_mm">{{ _('settings.detection.drift') }}</label>
+        <input class="form-input" type="number" step="0.1" min="0" max="4" style="max-width:160px;"
+               id="local_drift_search_mm" name="local_drift_search_mm"
+               value="{{ '%.1f'|format(settings.local_drift_search_mm) }}" oninput="updatePreview()">
+        <p class="omr-help">{{ _('settings.detection.drift_help') }}</p>
+      </div>
+    </section>
+
+    <!-- Print -->
+    <section class="omr-section">
+      <div class="omr-section-head">
+        <h2>{{ _('settings.print.header') }}</h2>
+        <p class="muted">{{ _('settings.print.desc') }}</p>
+      </div>
+
+      <div class="omr-field-grid">
+        <div class="form-field">
+          <label class="form-label" for="bubble_outline_gray">{{ _('settings.print.bubble_outline') }}</label>
+          <input class="form-input" type="number" step="0.01" min="0" max="1"
+                 id="bubble_outline_gray" name="bubble_outline_gray"
+                 value="{{ '%.2f'|format(settings.bubble_outline_gray) }}" oninput="updatePreview()">
+          <p class="omr-help">{{ _('settings.print.bubble_outline_help') }}</p>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="grid_line_gray">{{ _('settings.print.grid_line') }}</label>
+          <input class="form-input" type="number" step="0.01" min="0" max="1"
+                 id="grid_line_gray" name="grid_line_gray"
+                 value="{{ '%.2f'|format(settings.grid_line_gray) }}" oninput="updatePreview()">
+          <p class="omr-help">{{ _('settings.print.grid_line_help') }}</p>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="choice_label_gray">{{ _('settings.print.choice_label') }}</label>
+          <input class="form-input" type="number" step="0.01" min="0" max="1"
+                 id="choice_label_gray" name="choice_label_gray"
+                 value="{{ '%.2f'|format(settings.choice_label_gray) }}" oninput="updatePreview()">
+          <p class="omr-help">{{ _('settings.print.choice_label_help') }}</p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" type="submit"
+                formaction="/settings/omr/reset" formnovalidate
+                onclick="return confirm('{{ _('settings.reset_confirm') }}')">{{ _('settings.reset') }}</button>
+        <button class="btn btn-primary" type="submit">{{ _('settings.save') }}</button>
+      </div>
+    </section>
+  </form>
+
+  <!-- RIGHT: live preview -->
+  <aside class="omr-preview-panel">
+
+    <!-- Detection preview -->
+    <div class="omr-preview-card">
+      <h3 class="omr-preview-title">{{ _('settings.preview.detection_title') }}</h3>
+      <p class="omr-preview-desc">{{ _('settings.preview.detection_desc') }}</p>
+
+      <div class="omr-thbar">
+        <div class="omr-zone z-blank" id="zone-blank"></div>
+        <div class="omr-zone z-unclear" id="zone-unclear"></div>
+        <div class="omr-zone z-ok" id="zone-ok"></div>
+      </div>
+      <div class="omr-thbar-legend">
+        <span><i class="omr-dot d-blank"></i>{{ _('settings.preview.zone_blank') }} <b id="lbl-weak"></b></span>
+        <span><i class="omr-dot d-unclear"></i>{{ _('settings.preview.zone_unclear') }}</span>
+        <span><i class="omr-dot d-ok"></i>{{ _('settings.preview.zone_ok') }} <b id="lbl-mark"></b></span>
+      </div>
+
+      <div class="omr-sub-label">{{ _('settings.preview.samples_label') }}</div>
+      <div class="omr-samples" id="omr-samples"></div>
+    </div>
+
+    <!-- Gap demo -->
+    <div class="omr-preview-card">
+      <h3 class="omr-preview-title">{{ _('settings.preview.gap_title') }}</h3>
+      <div class="omr-gap-bubbles">
+        <span class="omr-bubble" style="background:rgba(0,0,0,.70)"></span>
+        <span class="omr-bubble" style="background:rgba(0,0,0,.62)"></span>
+      </div>
+      <p class="omr-gap-demo" id="omr-gap-demo"></p>
+    </div>
+
+    <!-- Darkness cutoff -->
+    <div class="omr-preview-card">
+      <h3 class="omr-preview-title">{{ _('settings.preview.darkness_title') }}</h3>
+      <p class="omr-preview-desc">{{ _('settings.preview.darkness_desc') }}</p>
+      <div class="omr-darkness" id="omr-darkness"></div>
+    </div>
+
+    <!-- Drift -->
+    <div class="omr-preview-card">
+      <h3 class="omr-preview-title">{{ _('settings.preview.drift_title') }}</h3>
+      <div class="omr-drift">
+        <span class="omr-drift-box" id="omr-drift-box"><span class="omr-drift-dot"></span></span>
+        <p class="omr-preview-desc" id="omr-drift-desc" style="margin:0;"></p>
+      </div>
+    </div>
+
+    <!-- Print preview -->
+    <div class="omr-preview-card">
+      <h3 class="omr-preview-title">{{ _('settings.preview.print_title') }}</h3>
+      <p class="omr-preview-desc">{{ _('settings.preview.print_desc') }}</p>
+      <div class="omr-sheet" id="omr-sheet">
+        <div class="omr-sheet-fields">
+          <div class="omr-sheet-field"><span>{{ _('settings.preview.print_student_no') }}</span><i class="omr-sheet-line"></i></div>
+          <div class="omr-sheet-field"><span>{{ _('settings.preview.print_name') }}</span><i class="omr-sheet-line"></i></div>
+        </div>
+        <i class="omr-sheet-rule"></i>
+        <div class="omr-sheet-rows" id="omr-sheet-rows"></div>
+        <div class="omr-sheet-filled">
+          <span class="omr-bubble omr-bubble-filled"></span>
+          <span class="muted text-xs">{{ _('settings.preview.print_filled') }}</span>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.omr-settings-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 1fr) minmax(300px, 420px);
+  gap: var(--sp-6);
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .omr-settings-layout { grid-template-columns: 1fr; }
+}
+.omr-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.omr-section {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-xs);
+}
+.omr-section-head { margin-bottom: var(--sp-4); }
+.omr-section-head h2 { margin: 0 0 4px; font-size: 16px; }
+.omr-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-4);
+}
+.omr-form .form-field { margin-bottom: var(--sp-4); }
+.omr-help {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--clr-muted);
+}
+.omr-preset-locked { color: var(--clr-primary); font-weight: 600; }
+.omr-form .form-input[readonly] {
+  background: var(--clr-surface-2);
+  color: var(--clr-muted);
+  cursor: not-allowed;
+}
+
+/* Preview panel */
+.omr-preview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  position: sticky;
+  top: var(--sp-6);
+}
+.omr-preview-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-4) var(--sp-5);
+  box-shadow: var(--shadow-xs);
+}
+.omr-preview-title { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+.omr-preview-desc { margin: 0 0 var(--sp-3); font-size: 12px; color: var(--clr-muted); line-height: 1.5; }
+.omr-sub-label { margin: var(--sp-4) 0 var(--sp-2); font-size: 12px; font-weight: 600; color: var(--clr-text-2); }
+
+/* Threshold bar */
+.omr-thbar {
+  display: flex;
+  height: 16px;
+  border-radius: var(--r-full);
+  overflow: hidden;
+  border: 1px solid var(--clr-border);
+}
+.omr-zone { height: 100%; transition: width .15s ease; }
+.z-blank { background: #e2e8f0; }
+.z-unclear { background: #fde68a; }
+.z-ok { background: #86efac; }
+.omr-thbar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+  font-size: 11px;
+  color: var(--clr-text-2);
+}
+.omr-thbar-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.omr-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.d-blank { background: #e2e8f0; }
+.d-unclear { background: #fbbf24; }
+.d-ok { background: #4ade80; }
+
+/* Sample bubbles */
+.omr-samples { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.omr-sample { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 52px; }
+.omr-bubble {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1.5px solid #94a3b8; box-sizing: border-box;
+}
+.omr-bubble-filled { background: #000; border-color: #000; }
+.omr-sample-pct { font-size: 10px; color: var(--clr-muted); }
+.omr-sample-verdict { font-size: 10px; font-weight: 700; text-align: center; }
+.v-blank { color: #64748b; }
+.v-unclear { color: #d97706; }
+.v-ok { color: #16a34a; }
+
+/* Gap demo */
+.omr-gap-bubbles { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.omr-gap-bubbles .omr-bubble { border-color: #000; }
+.omr-gap-demo { margin: 0; font-size: 12px; line-height: 1.6; color: var(--clr-text-2); }
+.omr-gap-demo b { font-weight: 700; }
+
+/* Darkness strip */
+.omr-darkness { display: flex; gap: 6px; }
+.omr-swatch { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.omr-swatch-chip { width: 100%; height: 30px; border-radius: var(--r-sm); border: 1px solid var(--clr-border-subtle); }
+.omr-swatch-tag { font-size: 9px; font-weight: 700; text-align: center; }
+.t-counts { color: #16a34a; }
+.t-ignored { color: #94a3b8; }
+
+/* Drift */
+.omr-drift { display: flex; align-items: center; gap: var(--sp-4); }
+.omr-drift-box {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px dashed var(--clr-primary);
+  border-radius: var(--r-md);
+  transition: width .15s, height .15s;
+}
+.omr-drift-dot { width: 18px; height: 18px; border-radius: 50%; background: #000; }
+
+/* Print preview sheet */
+.omr-sheet {
+  --outline: #9aa5b1; --grid: #c7ccd1; --label: #9aa5b1;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  background: #fff;
+}
+.omr-sheet-fields { display: flex; flex-direction: column; gap: 6px; }
+.omr-sheet-field { display: flex; align-items: center; gap: var(--sp-2); font-size: 11px; color: #475569; }
+.omr-sheet-field span { min-width: 64px; }
+.omr-sheet-line { flex: 1; height: 0; border-bottom: 1px solid var(--grid); }
+.omr-sheet-rule { display: block; height: 1px; background: var(--grid); margin: var(--sp-3) 0; }
+.omr-sheet-rows { display: flex; flex-direction: column; gap: 7px; }
+.omr-sheet-row { display: flex; align-items: center; gap: 7px; }
+.omr-sheet-qno { font-size: 10px; color: #64748b; min-width: 16px; font-weight: 600; }
+.omr-sheet-bubble {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--outline);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--label); box-sizing: border-box;
+}
+.omr-sheet-filled { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); }
+</style>
+<script>
+const OMR_PRESETS = {
+  {% for key, p in presets.items() %}
+  "{{ key }}": {
+    mark_threshold: {{ p.mark_threshold }},
+    weak_threshold: {{ p.weak_threshold }},
+    min_gap_between_top_two: {{ p.min_gap_between_top_two }},
+    dark_pixel_threshold: {{ p.dark_pixel_threshold }}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+};
+const OMR_TXT = {
+  blank: {{ _('settings.preview.zone_blank')|tojson }},
+  unclear: {{ _('settings.preview.zone_unclear')|tojson }},
+  ok: {{ _('settings.preview.zone_ok')|tojson }},
+  counts: {{ _('settings.preview.darkness_counts')|tojson }},
+  ignored: {{ _('settings.preview.darkness_ignored')|tojson }},
+  gapTpl: {{ _('settings.preview.gap_demo')|tojson }},
+  driftTpl: {{ _('settings.preview.drift_desc')|tojson }}
+};
+const PRESET_LOCKED = ['mark_threshold', 'weak_threshold', 'min_gap_between_top_two', 'dark_pixel_threshold'];
+
+function val(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function pct(v) { return Math.round(v * 100); }
+function fmt(tpl, vars) { return tpl.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? vars[k] : '')); }
+
+function applyPreset() {
+  const preset = document.getElementById('preset').value;
+  const locked = preset !== 'custom' && OMR_PRESETS[preset];
+  if (locked) {
+    const p = OMR_PRESETS[preset];
+    document.getElementById('mark_threshold').value = p.mark_threshold.toFixed(2);
+    document.getElementById('weak_threshold').value = p.weak_threshold.toFixed(2);
+    document.getElementById('min_gap_between_top_two').value = p.min_gap_between_top_two.toFixed(2);
+    document.getElementById('dark_pixel_threshold').value = p.dark_pixel_threshold;
+  }
+  PRESET_LOCKED.forEach(id => { document.getElementById(id).readOnly = !!locked; });
+  document.getElementById('preset-locked-note').hidden = !locked;
+  updatePreview();
+}
+
+function updatePreview() {
+  const mark = val('mark_threshold');
+  const weak = Math.min(val('weak_threshold'), mark);
+  const gap = val('min_gap_between_top_two');
+  const dark = val('dark_pixel_threshold');
+  const drift = val('local_drift_search_mm');
+
+  // Threshold zones
+  document.getElementById('zone-blank').style.width = pct(weak) + '%';
+  document.getElementById('zone-unclear').style.width = pct(mark - weak) + '%';
+  document.getElementById('zone-ok').style.width = pct(1 - mark) + '%';
+  document.getElementById('lbl-weak').textContent = '< ' + pct(weak) + '%';
+  document.getElementById('lbl-mark').textContent = '≥ ' + pct(mark) + '%';
+
+  // Sample bubbles (single bubble => verdict depends on weak/mark only)
+  const fills = [0.10, 0.22, 0.32, 0.45, 0.65, 0.85];
+  document.getElementById('omr-samples').innerHTML = fills.map(f => {
+    let label, cls;
+    if (f < weak) { label = OMR_TXT.blank; cls = 'v-blank'; }
+    else if (f < mark) { label = OMR_TXT.unclear; cls = 'v-unclear'; }
+    else { label = OMR_TXT.ok; cls = 'v-ok'; }
+    return `<div class="omr-sample">
+      <span class="omr-bubble" style="background:rgba(0,0,0,${f})"></span>
+      <span class="omr-sample-pct">${pct(f)}%</span>
+      <span class="omr-sample-verdict ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+
+  // Gap demo: two dark bubbles 70% and 62% => diff 8%
+  const top = 0.70, second = 0.62, diff = top - second;
+  const verdict = diff < gap ? OMR_TXT.unclear : OMR_TXT.ok;
+  document.getElementById('omr-gap-demo').innerHTML = fmt(OMR_TXT.gapTpl, {
+    top: pct(top), second: pct(second), diff: pct(diff), gap: pct(gap),
+    verdict: `<b>${verdict}</b>`
+  });
+
+  // Darkness strip: brightness samples; counted as dark when value < threshold
+  const shades = [220, 180, 140, 100, 60, 20];
+  document.getElementById('omr-darkness').innerHTML = shades.map(v => {
+    const counted = v < dark;
+    return `<div class="omr-swatch">
+      <span class="omr-swatch-chip" style="background:rgb(${v},${v},${v})"></span>
+      <span class="omr-swatch-tag ${counted ? 't-counts' : 't-ignored'}">${counted ? OMR_TXT.counts : OMR_TXT.ignored}</span>
+    </div>`;
+  }).join('');
+
+  // Drift search box: scale mm to px
+  const size = 26 + drift * 12;
+  const box = document.getElementById('omr-drift-box');
+  box.style.width = size + 'px';
+  box.style.height = size + 'px';
+  document.getElementById('omr-drift-desc').textContent = fmt(OMR_TXT.driftTpl, { mm: drift.toFixed(1) });
+
+  // Print preview grays (value 0..1 => rgb, higher = lighter)
+  const toRgb = id => { const g = Math.round(val(id) * 255); return `rgb(${g},${g},${g})`; };
+  const sheet = document.getElementById('omr-sheet');
+  sheet.style.setProperty('--outline', toRgb('bubble_outline_gray'));
+  sheet.style.setProperty('--grid', toRgb('grid_line_gray'));
+  sheet.style.setProperty('--label', toRgb('choice_label_gray'));
+}
+
+function renderSheetRows() {
+  const rows = document.getElementById('omr-sheet-rows');
+  rows.innerHTML = Array.from({ length: 4 }, (_, i) =>
+    `<div class="omr-sheet-row">
+      <span class="omr-sheet-qno">${i + 1}</span>
+      ${Array.from({ length: 5 }, (_, j) => `<span class="omr-sheet-bubble">${j + 1}</span>`).join('')}
+    </div>`
+  ).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderSheetRows();
+  applyPreset();
+});
+</script>
+{% endblock %}

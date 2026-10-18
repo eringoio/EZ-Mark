@@ -1,0 +1,9 @@
+{#
+  Shown when an exact 実施日/test-date filter returns no hits. Renders the explanatory
+  message and, when `has_fallback` is truthy, the "other items in the same month" heading.
+  The including page renders the fallback cards right after this partial.
+#}
+<div class="month-fallback-notice">{{ _('filters.no_date_hits') }}</div>
+{% if has_fallback %}
+  <h2 class="month-fallback-heading">{{ _('filters.same_month_results') }}</h2>
+{% endif %}

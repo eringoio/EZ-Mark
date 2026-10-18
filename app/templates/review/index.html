@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('review.title') }}{% endblock %}
+
+{% block head %}
+<style>
+/* Wide layout for the scan review page */
+body .content-body {
+  width: 100%;
+  max-width: none;
+  padding-left: var(--sp-5);
+  padding-right: var(--sp-5);
+}
+.review-workspace {
+  grid-template-columns: 1fr 300px;
+}
+.review-image-body {
+  align-items: flex-start;
+  padding: var(--sp-2);
+  overflow: auto;
+}
+.review-image-body .review-image-wrapper {
+  display: block;
+  width: 100%;
+}
+.review-image-body img {
+  width: 100%;
+  height: auto;
+  max-height: none;
+}
+</style>
+<script>
+(function () {
+  function postReviewAction(url, params) {
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = url;
+    Object.keys(params || {}).forEach(function (key) {
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = params[key];
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function renderBubbleOverlay() {
+    var wrapper = document.getElementById('review-image-wrapper');
+    var img = document.getElementById('review-scan-image');
+    var overlay = document.getElementById('review-bubble-overlay');
+    if (!wrapper || !img || !overlay) return;
+
+    var cmapScript = document.getElementById('review-cmap-data');
+    if (!cmapScript) return;
+    var cmap;
+    try { cmap = JSON.parse(cmapScript.textContent); } catch (e) { return; }
+
+    var rmapScript = document.getElementById('review-rmap-data');
+    var rmap = {};
+    if (rmapScript) {
+      try { rmap = JSON.parse(rmapScript.textContent); } catch (e) {}
+    }
+
+    var examId = wrapper.dataset.examId || '';
+    var blankLabel = wrapper.dataset.blankLabel || 'Blank';
+    var invalidLabel = wrapper.dataset.invalidLabel || 'Invalid';
+
+    overlay.innerHTML = '';
+
+    var pw = cmap.page_width_mm || 210;
+    var ph = cmap.page_height_mm || 297;
+    var questions = cmap.questions || [];
+
+    var imgRect = img.getBoundingClientRect();
+    var wrapRect = wrapper.getBoundingClientRect();
+    overlay.style.left = (imgRect.left - wrapRect.left) + 'px';
+    overlay.style.top = (imgRect.top - wrapRect.top) + 'px';
+    overlay.style.width = imgRect.width + 'px';
+    overlay.style.height = imgRect.height + 'px';
+
+    function addControl(xMm, yMm, label, className, url, title, sizePx) {
+      var ctl = document.createElement('div');
+      ctl.className = 'bubble-ctl ' + className;
+      ctl.textContent = label;
+      ctl.title = title;
+      ctl.style.left = (xMm / pw * 100) + '%';
+      ctl.style.top = (yMm / ph * 100) + '%';
+      ctl.style.width = sizePx + 'px';
+      ctl.style.height = sizePx + 'px';
+      ctl.style.fontSize = Math.round(sizePx * 0.6) + 'px';
+      ctl.addEventListener('click', function () { postReviewAction(url, {}); });
+      overlay.appendChild(ctl);
+    }
+
+    function coordinateKey(q, qi) {
+      if (q.coordinate_key) return String(q.coordinate_key);
+      var groupLabel = String(q.group_label || '').trim();
+      var displayLabel = String(q.display_label || '').trim();
+      var choiceCount = (q.choices || []).length;
+      return [qi, groupLabel, displayLabel, choiceCount].join('|');
+    }
+
+    for (var qi = 0; qi < questions.length; qi++) {
+      var q = questions[qi];
+      var info = rmap[coordinateKey(q, qi)] || null;
+      var choices = q.choices || [];
+
+      for (var ci = 0; ci < choices.length; ci++) {
+        var c = choices[ci];
+        var dot = document.createElement('div');
+        dot.className = 'bubble-dot';
+
+        var xPct = c.x_mm / pw * 100;
+        var yPct = c.y_mm / ph * 100;
+        var rPx = Math.max(6, c.radius_mm / pw * imgRect.width);
+        dot.style.left = xPct + '%';
+        dot.style.top = yPct + '%';
+        dot.style.width = (rPx * 2) + 'px';
+        dot.style.height = (rPx * 2) + 'px';
+
+        var choiceStr = String(c.choice);
+
+        if (info) {
+          if (choiceStr === info.detected && choiceStr === info.correct) {
+            dot.classList.add('bubble-correct');
+          } else if (choiceStr === info.detected) {
+            dot.classList.add('bubble-wrong');
+          } else if (choiceStr === info.correct && info.detected !== '') {
+            dot.classList.add('bubble-answer');
+          } else {
+            dot.classList.add('bubble-empty');
+          }
+          if (info.is_current) {
+            // Current question: clicking a bubble saves that answer directly.
+            dot.classList.add('bubble-is-current');
+            dot.classList.add('bubble-choice-clickable');
+            dot.title = choiceStr;
+            (function (responseId, choice) {
+              dot.addEventListener('click', function () {
+                postReviewAction('/responses/' + responseId + '/correct', { final_answer: choice });
+              });
+            })(info.response_id, choiceStr);
+          } else {
+            // Other queue items: clicking jumps to that item.
+            dot.classList.add('bubble-clickable');
+            (function (responseId) {
+              dot.addEventListener('click', function () {
+                window.location.href = '/exams/' + examId + '/review?response_id=' + responseId;
+              });
+            })(info.response_id);
+          }
+        } else {
+          dot.classList.add('bubble-ghost');
+        }
+
+        overlay.appendChild(dot);
+      }
+
+      if (info && info.is_current && choices.length) {
+        var last = choices[choices.length - 1];
+        var ctlSize = Math.max(14, last.radius_mm / pw * imgRect.width * 2);
+        addControl(
+          last.x_mm + last.radius_mm + 4.2, last.y_mm, '×', 'bubble-ctl-blank',
+          '/responses/' + info.response_id + '/mark-blank', blankLabel, ctlSize
+        );
+        addControl(
+          last.x_mm + last.radius_mm + 9.6, last.y_mm, '!', 'bubble-ctl-invalid',
+          '/responses/' + info.response_id + '/mark-invalid', invalidLabel, ctlSize
+        );
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var img = document.getElementById('review-scan-image');
+    if (!img) return;
+    if (img.complete && img.naturalWidth) {
+      renderBubbleOverlay();
+    } else {
+      img.addEventListener('load', renderBubbleOverlay);
+    }
+    window.addEventListener('resize', renderBubbleOverlay);
+  });
+})();
+</script>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow"><a href="/exams/{{ exam.id }}" style="text-decoration:none;color:inherit;">{{ exam.name }}</a></p>
+      <h1>{{ _('nav.scan_review') }}</h1>
+      {% if view_page %}
+        <p class="page-subtitle">{{ _('review.view_mode') }}</p>
+      {% elif responses %}
+        <p class="page-subtitle">
+          <span style="color: var(--clr-orange); font-weight:700;">{{ responses|length }}</span> {{ _('review.unresolved_problems') }}
+        </p>
+      {% else %}
+        <p class="page-subtitle">{{ _('review.empty') }}</p>
+      {% endif %}
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-secondary" href="/exams/{{ exam.id }}/scan-batches">{{ _('exams.detail.scans') }}</a>
+      {% if not view_page %}
+        <a class="btn btn-secondary" href="/exams/{{ exam.id }}/results">{{ _('nav.insights') }}</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="alert alert-danger" role="alert">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  <div class="review-workspace" id="review-workspace">
+
+    <!-- LEFT: scan image panel -->
+    <div class="review-image-panel">
+      <div class="review-image-header">
+        <h3 id="review-image-label">
+          {% set display_page = current.scanned_page if current else view_page %}
+          {% if display_page and display_page.sheet_instance %}
+            {{ display_page.sheet_instance.printed_student_number }}
+            / {{ display_page.sheet_instance.printed_name }}
+            {% if view_page %}
+              <span class="muted text-sm" style="margin-left:var(--sp-2);">({{ _('review.view_mode') }})</span>
+            {% endif %}
+          {% else %}
+            {{ _('review.current.empty') }}
+          {% endif %}
+        </h3>
+        {% if page_response_map %}
+          <span style="font-size:12px; color:var(--clr-muted);">
+            {{ _('review.overlay.legend_wrong') }}
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(220,38,38,.7);margin:0 4px 0 2px;vertical-align:middle;"></span>
+            {{ _('review.overlay.legend_correct') }}
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(5,150,105,.7);margin:0 4px 0 2px;vertical-align:middle;"></span>
+            {{ _('review.overlay.legend_current') }}
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--clr-primary);margin:0 4px 0 2px;vertical-align:middle;"></span>
+          </span>
+        {% endif %}
+      </div>
+      <div class="review-image-body">
+        {% set display_page = current.scanned_page if current else view_page %}
+        {% if display_page and exam.assessment_type != "peer_review" %}
+          {% set sheet_template = display_page.sheet_instance.sheet_template if display_page.sheet_instance else none %}
+          {% if sheet_template and sheet_template.coordinate_map_json %}
+            <script type="application/json" id="review-cmap-data">{{ sheet_template.coordinate_map_json | tojson }}</script>
+          {% endif %}
+          <script type="application/json" id="review-rmap-data">{{ page_response_map | tojson }}</script>
+          <div class="review-image-wrapper" id="review-image-wrapper"
+            data-exam-id="{{ exam.id }}"
+            data-blank-label="{{ _('review.current.blank') }}"
+            data-invalid-label="{{ _('review.current.invalid') }}"
+          >
+            <img
+              src="/scanned-pages/{{ display_page.id }}/image"
+              alt="{{ _('review.current.header') }}"
+              id="review-scan-image"
+            >
+            <div class="review-bubble-overlay" id="review-bubble-overlay"></div>
+          </div>
+        {% else %}
+          <div class="review-image-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <p>{{ _('review.current.empty_desc') }}</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RIGHT: current item + queue -->
+    <div class="review-right-panel">
+
+      <!-- Current review item (HTMX partial target) — hidden in view-only mode -->
+      {% if not view_page %}
+      <div id="review-current-panel">
+        {% include "review/current.html" %}
+      </div>
+      {% if current and bulk_page_remaining_count %}
+        <div class="panel">
+          <div class="panel-header">
+            <h2>{{ _('review.bulk_page.title') }}</h2>
+          </div>
+          <div class="panel-body">
+            <p class="text-sm muted">{{ _('review.bulk_page.description') }}</p>
+            <form method="post"
+                  action="/scanned-pages/{{ current.scanned_page.id }}/mark-remaining-blank"
+                  onsubmit="return confirm('{{ _('review.bulk_page.confirm_blank') }}');"
+                  style="margin-top: var(--sp-3);">
+              <button class="btn btn-secondary btn-sm" type="submit">
+                {{ _('review.bulk_page.remaining_blank', count=bulk_page_remaining_count) }}
+              </button>
+            </form>
+            <form method="post"
+                  action="/scanned-pages/{{ current.scanned_page.id }}/mark-remaining-invalid"
+                  onsubmit="return confirm('{{ _('review.bulk_page.confirm_invalid') }}');"
+                  style="margin-top: var(--sp-2);">
+              <button class="btn btn-secondary btn-sm" type="submit">
+                {{ _('review.bulk_page.remaining_invalid', count=bulk_page_remaining_count) }}
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+      {% endif %}
+
+      <!-- Hidden prev/next anchors for keyboard navigation -->
+      {% if prev_response_id %}
+        <a id="review-prev-link" href="/exams/{{ exam.id }}/review?response_id={{ prev_response_id }}" hidden></a>
+      {% endif %}
+      {% if next_response_id %}
+        <a id="review-next-link" href="/exams/{{ exam.id }}/review?response_id={{ next_response_id }}" hidden></a>
+      {% endif %}
+
+      <!-- Queue list -->
+      {% if responses %}
+        <div class="review-queue-panel">
+          <div class="panel-header">
+            <h2>{{ _('review.queue') }} ({{ responses|length }})</h2>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                {% if exam.assessment_type == "peer_review" %}
+                  <th>{{ _('review.reviewer') }}</th>
+                  <th>{{ _('review.competency') }}</th>
+                {% else %}
+                  <th>{{ _('review.question') }}</th>
+                {% endif %}
+                <th>{{ _('review.detected') }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if exam.assessment_type == "peer_review" %}
+                {% for response in responses %}
+                  {% set is_current = current and response.id == current.id %}
+                  <tr class="{% if is_current %}review-queue-active{% endif %}">
+                    <td>
+                      <span class="font-bold">{{ response.reviewer.name }}</span>
+                      <span class="muted text-sm" style="display:block;">→ {{ response.target_student.name }}</span>
+                    </td>
+                    <td class="text-sm">{{ response.competency.name }}</td>
+                    <td>{{ response.detected_score if response.detected_score is not none else "—" }}</td>
+                    <td>
+                      {% if not is_current %}
+                        <a class="btn btn-secondary btn-sm"
+                           href="/exams/{{ exam.id }}/review?response_id={{ response.id }}">
+                          {{ _('review.action.select') }}
+                        </a>
+                      {% else %}
+                        <span class="text-xs muted">{{ _('review.action.current') }}</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                {% for group in queue_groups %}
+                  <tr class="review-queue-group-header">
+                    <td colspan="3">{{ group.header }}</td>
+                  </tr>
+                  {% for item in group["items"] %}
+                    {% set response = item.response %}
+                    {% set is_current = current and response.id == current.id %}
+                    <tr class="{% if is_current %}review-queue-active{% endif %}">
+                      <td>
+                        <span class="font-bold">{{ item.q_label }}</span>
+                      </td>
+                      <td>{{ response.detected_answer or "—" }}</td>
+                      <td>
+                        {% if not is_current %}
+                          <a class="btn btn-secondary btn-sm"
+                             href="/exams/{{ exam.id }}/review?response_id={{ response.id }}">
+                            {{ _('review.action.select') }}
+                          </a>
+                        {% else %}
+                          <span class="text-xs muted">{{ _('review.action.current') }}</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% endfor %}
+              {% endif %}
+            </tbody>
+          </table>
+          <div class="review-shortcut-hint">
+            <kbd>1</kbd>–<kbd>9</kbd> {{ _('review.shortcuts.answer') }} ·
+            <kbd>B</kbd> {{ _('review.current.blank') }} ·
+            <kbd>X</kbd> {{ _('review.current.invalid') }} ·
+            <kbd>↑</kbd><kbd>↓</kbd>/<kbd>J</kbd><kbd>K</kbd> {{ _('review.shortcuts.navigate') }}
+          </div>
+        </div>
+      {% else %}
+        <div class="panel">
+          <div class="empty-state" style="padding: var(--sp-8) var(--sp-6);">
+            <div class="empty-state-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h3>要確認の回答はありません。</h3>
+            <p>{{ _('review.empty_desc') }}</p>
+            {% if orphan_review_items %}
+              <div class="alert alert-danger" role="alert" style="text-align:left; margin-top: var(--sp-4);">
+                {{ broken_response_message }}
+              </div>
+              <table class="data-table" style="margin-top: var(--sp-4); text-align:left;">
+                <thead>
+                  <tr>
+                    <th>Response</th>
+                    <th>Question</th>
+                    <th>候補</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in orphan_review_items %}
+                    <tr>
+                      <td>{{ item.response_id }}</td>
+                      <td>
+                        {{ item.group_label or "—" }}
+                        {% if item.display_label %} / {{ item.display_label }}{% endif %}
+                      </td>
+                      <td>
+                        {% if item.recoverable %}
+                          修復可能: {{ item.possible_matching_question_ids|join(", ") }}
+                        {% elif item.possible_matching_question_ids %}
+                          複数候補: {{ item.possible_matching_question_ids|join(", ") }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td>{{ item.status }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% endif %}
+            {% if stale_needs_review_pages %}
+              <p class="muted">
+                一部のページは要確認になっていますが、個別の回答エラーはありません。読み取り状態・画像・対応付けを確認してください。
+              </p>
+              <table class="data-table" style="margin-top: var(--sp-4); text-align:left;">
+                <thead>
+                  <tr>
+                    <th>Page</th>
+                    <th>Student</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for page in stale_needs_review_pages %}
+                    <tr>
+                      <td>{{ page.page_no }}</td>
+                      <td>
+                        {% if page.sheet_instance %}
+                          {{ page.sheet_instance.printed_student_number }} / {{ page.sheet_instance.printed_name }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td>{{ page.qr_status }} / {{ page.alignment_status }}</td>
+                      <td>
+                        <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}/review?scanned_page_id={{ page.id }}">Open</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% endif %}
+            <div style="display:flex; gap: var(--sp-2); justify-content:center; margin-top: var(--sp-4);">
+              <a class="btn btn-secondary" href="/exams/{{ exam.id }}/scan-batches">{{ _('exams.detail.scans') }}</a>
+              <a class="btn btn-primary" href="/exams/{{ exam.id }}/results">{{ _('nav.insights') }}</a>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+    <!-- /RIGHT -->
+
+  </div>
+{% endblock %}

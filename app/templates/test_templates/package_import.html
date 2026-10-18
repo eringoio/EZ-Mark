@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('packages.import_template') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">EZ Mark</p>
+      <h1>{{ _('packages.import_template') }}</h1>
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-error" role="alert">
+      {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <form class="upload-panel" method="post" action="/templates/import-package/preview"
+        enctype="multipart/form-data">
+    <div class="file-dropzone">
+      <div class="upload-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+      </div>
+      <p class="upload-title">{{ _('packages.import_choose_file') }}</p>
+      <input class="upload-file-input" name="file" type="file" accept=".zip" required>
+      <p class="upload-meta">{{ _('upload.accepted_types') }}: .zip</p>
+    </div>
+    <div class="upload-actions">
+      <a class="btn btn-secondary" href="/templates">{{ _('common.cancel') }}</a>
+      <button class="btn btn-primary" type="submit">{{ _('packages.preview_title') }}</button>
+    </div>
+  </form>
+{% endblock %}

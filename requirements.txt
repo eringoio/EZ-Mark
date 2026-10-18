@@ -1,0 +1,18 @@
+# EZ Mark runtime dependencies (Python 3.10+).
+# Development/test-only tools live in requirements-dev.txt.
+fastapi>=0.100
+uvicorn[standard]>=0.20
+jinja2>=3.1
+python-multipart>=0.0.6
+sqlalchemy>=2.0
+alembic>=1.12
+pydantic>=2.0
+pydantic-settings>=2.0
+opencv-python>=4.8
+numpy>=1.24
+pypdfium2>=5.0
+reportlab>=4.0
+qrcode[pil]>=7.4
+pillow>=10.0
+openpyxl>=3.1
+python-dotenv>=1.0

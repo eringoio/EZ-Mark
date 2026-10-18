@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('answer_keys.structure.title') }}{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('answer_keys.structure.title') }}</p>
+      <h1>{{ exam.name }}</h1>
+      <p class="muted">{{ _('answer_keys.structure.desc') }}</p>
+    </div>
+  </section>
+
+  {% if errors %}
+    <div class="alert-error" role="alert">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form
+    class="form-panel"
+    method="post"
+    action="/exams/{{ exam.id }}/question-structure/generate-questions"
+  >
+    <fieldset>
+      <legend>{{ _('answer_keys.structure.legend') }}</legend>
+      <label class="radio-card">
+        <input type="radio" name="numbering_mode" value="continuous" checked>
+        <span>
+          <strong>{{ _('exams.continuous') }}</strong>
+          {{ _('exams.continuous_desc') }}
+        </span>
+      </label>
+      <label class="radio-card">
+        <input type="radio" name="numbering_mode" value="reset_per_problem">
+        <span>
+          <strong>{{ _('exams.reset_per_problem') }}</strong>
+          {{ _('answer_keys.structure.grouped_desc') }}
+        </span>
+      </label>
+    </fieldset>
+
+    <label>
+      {{ _('answer_keys.structure.total_continuous') }}
+      <input name="total_questions" type="number" min="1" value="30">
+    </label>
+
+    <label>
+      {{ _('answer_keys.structure.group_counts') }}
+      <input name="group_counts" value="5,5,5">
+    </label>
+
+    <label>
+      {{ _('answer_keys.structure.choices_label') }}
+      <input name="choice_count" type="number" min="2" max="5" value="4">
+    </label>
+
+    <label>
+      {{ _('answer_keys.structure.physical_sheet_label') }}
+      <select name="physical_sheet_id" required>
+        {% for sheet in exam.physical_sheets %}
+          <option value="{{ sheet.id }}">{{ sheet.sheet_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      {{ _('answer_keys.structure.scoring_section_label') }}
+      <select name="scoring_section_id">
+        {% for section in exam.scoring_sections %}
+          <option value="{{ section.id }}">{{ section.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <div class="form-actions">
+      {% if exam.is_template %}
+        <a class="button-secondary" href="/templates/{{ exam.id }}/builder">{{ _('common.cancel') }}</a>
+      {% else %}
+        <a class="button-secondary" href="/exams/{{ exam.id }}">{{ _('common.cancel') }}</a>
+      {% endif %}
+      <button class="button-primary" type="submit">{{ _('answer_keys.structure.generate') }}</button>
+    </div>
+  </form>
+{% endblock %}

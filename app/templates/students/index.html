@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% from "components/_macros.html" import workflow_url %}
+
+{% block title %}{{ _('students.title') }}{% endblock %}
+
+{% block head %}
+<script>
+function addStudentRow() {
+  var tbody = document.getElementById('student-rows');
+  var tmpl = tbody.querySelector('.row-template');
+  if (!tmpl) return;
+  var row = tmpl.cloneNode(true);
+  row.style.display = '';
+  row.removeAttribute('aria-hidden');
+  row.classList.remove('row-template');
+  row.querySelectorAll('input').forEach(function (inp) { inp.value = ''; inp.disabled = false; });
+  tbody.appendChild(row);
+  var first = row.querySelector('input:not([type="hidden"])');
+  if (first) first.focus();
+}
+
+function removeRow(btn) {
+  var row = btn.closest('tr');
+  var tbody = document.getElementById('student-rows');
+  var sidInput = row.querySelector('input[name="student_id"]');
+  if (sidInput && sidInput.value) {
+    // existing student: mark for removal
+    var marker = document.createElement('input');
+    marker.type = 'hidden';
+    marker.name = 'remove_id';
+    marker.value = sidInput.value;
+    row.appendChild(marker);
+    row.querySelectorAll('input[name="student_id"], input[name="student_number"], input[name="name"], input[name="class_name"], input[name="seat_order"]').forEach(function (inp) { inp.disabled = true; });
+    row.style.opacity = '0.35';
+    btn.innerHTML = '&#x21A9;';
+    btn.title = "{{ _('common.undo') }}";
+    btn.onclick = function () { undoRemove(row, btn); };
+  } else {
+    var active = Array.from(tbody.querySelectorAll('tr:not(.row-template)')).filter(function (r) { return !r.querySelector('input[name="remove_id"]'); });
+    if (active.length > 1) {
+      row.remove();
+    } else {
+      row.querySelectorAll('input:not([type="hidden"])').forEach(function (inp) { inp.value = ''; });
+    }
+  }
+}
+
+function undoRemove(row, btn) {
+  row.querySelectorAll('input[name="remove_id"]').forEach(function (inp) { inp.remove(); });
+  row.querySelectorAll('input').forEach(function (inp) { inp.disabled = false; });
+  row.style.opacity = '';
+  btn.innerHTML = '&#x2715;';
+  btn.title = '';
+  btn.onclick = function () { removeRow(btn); };
+}
+</script>
+{% endblock %}
+
+{% block content %}
+  <p class="muted">{{ _('students.conflicts.notice' if exam else 'students.conflicts.global_notice') }}</p>
+  <section class="page-header">
+    <div>
+      {% if exam %}
+        <p class="eyebrow"><a href="/exams/{{ exam.id }}" style="text-decoration:none;color:inherit;">{{ exam.name }}</a></p>
+      {% else %}
+        <p class="eyebrow">{{ _('nav.students') }}</p>
+      {% endif %}
+      <h1>{{ _('students.header') }}</h1>
+      {% if exam %}
+        <p class="page-subtitle">{{ _('flow.step_2_of_3_roster') }}</p>
+      {% endif %}
+    </div>
+    {% if exam %}
+      <a class="button-secondary" href="/exams/{{ exam.id }}/students/import">
+        {{ _('students.import') }}
+      </a>
+    {% endif %}
+  </section>
+
+  {% if exam %}
+    <div class="flow-stepper">
+      <div class="is-done"><span>1</span> {{ _('flow.details') }}</div>
+      <div class="is-current"><span>2</span> {{ _('flow.roster') }}</div>
+      <div><span>3</span> {{ _('flow.generate') }}</div>
+    </div>
+    <div class="guided-action-row">
+      <div>
+        <strong>{{ student_links|length }} {{ _('exams.detail.students') }}</strong>
+        <p>{{ _('students.roster_generation_note') }}</p>
+      </div>
+      {% if exam.assessment_type == "peer_review" %}
+        <a class="btn btn-primary" href="{{ workflow_url(exam, 'generate') }}">{{ _('students.continue_to_peer_review') }}</a>
+      {% else %}
+        <a class="btn btn-primary" href="{{ workflow_url(exam, 'generate') }}">{{ _('students.continue_to_generate_sheets') }}</a>
+      {% endif %}
+    </div>
+    {# ── Exam-context editable roster ── #}
+    <section class="panel">
+      <div class="panel-header">
+        <h2>{{ _('students.header') }}</h2>
+      </div>
+      <div style="padding: var(--sp-4) var(--sp-5) var(--sp-5);">
+        <form method="post" action="/exams/{{ exam.id }}/students/bulk-update">
+          <table class="student-input-table">
+            <thead>
+              <tr>
+                <th style="width:64px;">{{ _('students.table.seat_order') }}</th>
+                <th style="width:140px;">{{ _('students.table.student_number') }}</th>
+                <th>{{ _('students.table.name') }}</th>
+                <th style="width:110px;">{{ _('students.table.class') }}</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody id="student-rows">
+              {% for link in student_links %}
+                <tr>
+                  <td>
+                    <input type="hidden" name="student_id" value="{{ link.student.id }}">
+                    <input class="si-input si-narrow" type="text" name="seat_order"
+                           value="{{ link.seat_order or '' }}" placeholder="—">
+                  </td>
+                  <td><input class="si-input" type="text" name="student_number"
+                             value="{{ link.student.student_number }}"></td>
+                  <td><input class="si-input" type="text" name="name"
+                             value="{{ link.student.name }}"></td>
+                  <td><input class="si-input" type="text" name="class_name"
+                             value="{{ link.group_name }}"></td>
+                  <td><button type="button" class="row-remove" onclick="removeRow(this)">&#x2715;</button></td>
+                </tr>
+              {% endfor %}
+              {# hidden template row — inputs disabled so they don't submit; JS enables when cloned #}
+              <tr class="row-template" style="display:none;" aria-hidden="true">
+                <td>
+                  <input type="hidden" name="student_id" value="" disabled>
+                  <input class="si-input si-narrow" type="text" name="seat_order" placeholder="—" disabled>
+                </td>
+                <td><input class="si-input" type="text" name="student_number" placeholder="{{ _('students.table.student_number') }}" disabled></td>
+                <td><input class="si-input" type="text" name="name" placeholder="{{ _('students.table.name') }}" disabled></td>
+                <td><input class="si-input" type="text" name="class_name" placeholder="{{ _('students.table.class') }}" disabled></td>
+                <td><button type="button" class="row-remove" onclick="removeRow(this)">&#x2715;</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--sp-3);">
+            <button type="button" class="button-secondary" onclick="addStudentRow()">+ {{ _('students.import_form.add_row') }}</button>
+            <button class="button-primary" type="submit">{{ _('common.save') }}</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+  {% elif students %}
+    {# ── Global students editable table ── #}
+    <section class="panel">
+      <div class="panel-header">
+        <h2>{{ _('students.header') }}</h2>
+      </div>
+      <div style="padding: var(--sp-4) var(--sp-5) var(--sp-5);">
+        <form method="post" action="/students/bulk-update">
+          <table class="student-input-table">
+            <thead>
+              <tr>
+                <th style="width:140px;">{{ _('students.table.student_number') }}</th>
+                <th>{{ _('students.table.name') }}</th>
+                <th style="width:120px;">{{ _('students.table.class') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for student in students %}
+                <tr>
+                  <td>
+                    <input type="hidden" name="student_id" value="{{ student.id }}">
+                    <input class="si-input" type="text" name="student_number" value="{{ student.student_number }}">
+                  </td>
+                  <td><input class="si-input" type="text" name="name" value="{{ student.name }}"></td>
+                  <td><input class="si-input" type="text" name="class_name" value="{{ student.class_name }}"></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div style="display:flex; justify-content:flex-end; margin-top: var(--sp-3);">
+            <button class="button-primary" type="submit">{{ _('common.save') }}</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+  {% else %}
+    <div class="empty-state">
+      {% if exam %}
+        <h3>{{ _('students.empty') }}</h3>
+        <p>{{ _('students.import_form.desc') }}</p>
+        <a class="button-primary" href="/exams/{{ exam.id }}/students/import">{{ _('students.import') }}</a>
+      {% else %}
+        <h3>{{ _('students.empty') }}</h3>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

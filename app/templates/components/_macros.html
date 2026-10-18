@@ -1,0 +1,167 @@
+{#
+  Reusable Jinja2 macros.
+  Usage: {% from "components/_macros.html" import status_badge, type_pill, empty_state %}
+#}
+
+{# Render an exam/template status badge #}
+{% macro status_badge(status, i18n_prefix="exams") %}
+<span class="status-badge" data-status="{{ status }}">
+  {{ _('%s.status.%s' | format(i18n_prefix, status)) }}
+</span>
+{% endmacro %}
+
+{# Render an assessment type pill #}
+{% macro type_pill(assessment_type) %}
+{% if assessment_type == "peer_review" %}
+  <span class="type-pill peer">{{ _('exams.peer_review') }}</span>
+{% else %}
+  <span class="type-pill test">{{ _('exams.generic_test') }}</span>
+{% endif %}
+{% endmacro %}
+
+{# Render an empty state block #}
+{% macro empty_state(title, description, btn_href=None, btn_label=None) %}
+<div class="empty-state">
+  <div class="empty-state-icon">
+    {{ caller() if caller is defined }}
+  </div>
+  <h3>{{ title }}</h3>
+  <p>{{ description }}</p>
+  {% if btn_href and btn_label %}
+    <a class="btn btn-primary" href="{{ btn_href }}">{{ btn_label }}</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# Render a metric card (used in dashboard / results summary) #}
+{% macro metric_card(label, value, highlight=False) %}
+<div class="metric-card {% if highlight %}metric-card--highlight{% endif %}">
+  <span class="metric-card-value">{{ value }}</span>
+  <span class="metric-card-label">{{ label }}</span>
+</div>
+{% endmacro %}
+
+{# Render a WYSIWYG peer-review paper preview from a calculated layout dict.
+   `page` is one entry of peer_review_layout_payload()["pages"]: {page_no, layout}.
+   Labels are passed in so the macro stays standalone (no i18n context needed). #}
+{% macro peer_review_paper_preview(page, title_text="", target_label="Target", page_label="Page") %}
+{% set L = page.layout %}
+<svg class="pr-paper" viewBox="0 0 {{ L.page_width_mm }} {{ L.page_height_mm }}"
+     preserveAspectRatio="xMidYMin meet" role="img" aria-label="{{ title_text }}">
+  <rect x="0" y="0" width="{{ L.page_width_mm }}" height="{{ L.page_height_mm }}"
+        fill="#ffffff" stroke="#d0d7de" stroke-width="0.4"/>
+  {% for m in L.marker_positions.values() %}
+    <rect x="{{ m.x_mm }}" y="{{ m.y_mm }}" width="5" height="5" fill="#111"/>
+  {% endfor %}
+  {% set content_left = L.content_left_mm if L.content_left_mm is defined else 22 %}
+  {% if title_text %}<text x="{{ content_left }}" y="18" font-size="5" font-weight="700" fill="#111">{{ title_text[:60] }}</text>{% endif %}
+  <text x="{{ content_left }}" y="34" font-size="3.2" fill="#555">{{ page_label }} {{ page.page_no }}</text>
+  {% set qr = L.qr %}
+  <rect x="{{ qr.x_mm }}" y="{{ qr.y_mm }}" width="{{ qr.size_mm }}" height="{{ qr.size_mm }}" fill="none" stroke="#bbb" stroke-width="0.4"/>
+  <text x="{{ qr.x_mm + qr.size_mm / 2 }}" y="{{ qr.y_mm + qr.size_mm / 2 }}" font-size="3" text-anchor="middle" fill="#bbb">QR</text>
+
+  {# Header band shading to set the competency titles apart from the rating grid #}
+  <rect x="{{ L.table_left_mm }}" y="{{ L.header_top_mm }}"
+        width="{{ L.table_right_mm - L.table_left_mm }}" height="{{ L.table_top_mm - L.header_top_mm }}"
+        fill="#f3f6fa" stroke="none"/>
+
+  {# Vertical separators between the target column and each competency column #}
+  {% for x in L.column_separators_mm %}
+    <line x1="{{ x }}" y1="{{ L.header_top_mm }}" x2="{{ x }}" y2="{{ L.table_bottom_mm }}"
+          stroke="#9aa7b4" stroke-width="0.3"/>
+  {% endfor %}
+  <line x1="{{ L.table_left_mm }}" y1="{{ L.header_top_mm }}" x2="{{ L.table_right_mm }}" y2="{{ L.header_top_mm }}" stroke="#9aa7b4" stroke-width="0.3"/>
+  <line x1="{{ L.table_left_mm }}" y1="{{ L.table_top_mm }}" x2="{{ L.table_right_mm }}" y2="{{ L.table_top_mm }}" stroke="#9aa7b4" stroke-width="0.35"/>
+  <line x1="{{ L.table_left_mm }}" y1="{{ L.table_bottom_mm }}" x2="{{ L.table_right_mm }}" y2="{{ L.table_bottom_mm }}" stroke="#9aa7b4" stroke-width="0.3"/>
+
+  <text x="{{ L.target_column.x_mm }}" y="{{ L.name_y_mm }}" font-size="3.2" font-weight="700" fill="#333">{{ target_label }}</text>
+  {% for col in L.competency_columns %}
+    {% if col.name_furigana %}
+      <text x="{{ col.center_x_mm }}" y="{{ L.furigana_y_mm }}" font-size="2" text-anchor="middle" fill="#667">{{ col.name_furigana[:20] }}</text>
+    {% endif %}
+    {% set fit_font = (col.header_font_pt if col.header_font_pt is defined else 8) * 0.3528 %}
+    {% set lines = col.header_lines if (col.header_lines is defined and col.header_lines) else [col.name] %}
+    {% for line in lines %}
+      <text x="{{ col.center_x_mm }}" y="{{ L.name_y_mm + (loop.index0 - (lines|length - 1) / 2) * fit_font * 1.05 }}"
+            font-size="{{ fit_font }}" font-weight="700" text-anchor="middle" fill="#222">{{ line }}</text>
+    {% endfor %}
+    {# No score legend row: every bubble already carries its own number. #}
+  {% endfor %}
+
+  {% for row in L.target_rows %}
+    <text x="{{ L.target_column.x_mm }}" y="{{ row.y_mm + 1 }}" font-size="3" fill="#111">{{ row.display_label[:26] }}</text>
+    <line x1="{{ L.table_left_mm }}" y1="{{ row.y_mm + 6 }}" x2="{{ L.table_right_mm }}" y2="{{ row.y_mm + 6 }}" stroke="#eef0f2" stroke-width="0.25"/>
+  {% endfor %}
+  {% for b in L.rating_bubbles %}
+    <circle cx="{{ b.x_mm }}" cy="{{ b.y_mm }}" r="{{ b.radius_mm }}" fill="none" stroke="#3a6ea5" stroke-width="0.3"/>
+    <text x="{{ b.x_mm }}" y="{{ b.y_mm + 1 }}" font-size="2.2" text-anchor="middle" fill="#3a6ea5">{{ b.score }}</text>
+  {% endfor %}
+</svg>
+{% endmacro %}
+
+{# Resolve a workflow step URL for an exam/session, routing peer-review sessions to
+   their dedicated pages and everything else to the normal answer-sheet flow.
+   Steps: setup, students, generate, scan, review, results. #}
+{% macro workflow_url(exam, step) -%}
+{%- if exam.assessment_type == "peer_review" -%}
+  {%- if step == "setup" -%}/exams/{{ exam.id }}/peer-review/builder
+  {%- elif step == "students" -%}/exams/{{ exam.id }}/students
+  {%- elif step == "generate" -%}/exams/{{ exam.id }}/peer-review/builder
+  {%- elif step == "scan" -%}/exams/{{ exam.id }}/peer-review/scan-batches
+  {%- elif step == "review" -%}/exams/{{ exam.id }}/peer-review/review
+  {%- elif step == "results" -%}/exams/{{ exam.id }}/results
+  {%- else -%}/exams/{{ exam.id }}{%- endif -%}
+{%- else -%}
+  {%- if step == "setup" -%}/exams/{{ exam.id }}/edit
+  {%- elif step == "students" -%}/exams/{{ exam.id }}/students
+  {%- elif step == "generate" -%}/exams/{{ exam.id }}/sheets
+  {%- elif step == "scan" -%}/exams/{{ exam.id }}/scan-batches
+  {%- elif step == "review" -%}/exams/{{ exam.id }}/review
+  {%- elif step == "results" -%}/exams/{{ exam.id }}/results
+  {%- else -%}/exams/{{ exam.id }}{%- endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{# Render the resolved portrait/landscape page plan (orientation + rows/page + warnings).
+   `plan` is peer_review_layout_payload()["page_plan"]; `mode` is the configured
+   page_orientation_mode. Localized server-side. #}
+{% macro peer_review_plan_summary(plan, mode="auto") %}
+{% if plan %}
+{% set will_be = _('peer_review.will_be_landscape') if plan.orientation == "landscape" else _('peer_review.will_be_portrait') %}
+<div class="pr-plan {{ 'is-error' if not plan.fits else '' }}">
+  <p class="pr-plan-result">
+    {%- if mode == "auto" -%}{{ _('peer_review.auto_prefix') }}{{ will_be }}{%- else -%}{{ will_be }}{%- endif -%}
+  </p>
+  <p class="pr-plan-perpage">{{ _('peer_review.per_page_label', max=plan.max_students_per_page, actual=plan.students_per_page) }}</p>
+  {% for w in plan.layout_warnings %}
+    {% if w.code == "per_page_reduced" %}
+      <p class="pr-plan-warn">⚠ {{ _('peer_review.warn_reduced', max=w.max, actual=w.actual) }}</p>
+    {% elif w.code == "does_not_fit" %}
+      <p class="pr-plan-warn">⚠ {{ _('peer_review.warn_does_not_fit') }}</p>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{# Render a page header #}
+{% macro page_header(eyebrow, heading, subtitle="", eyebrow_href=None) %}
+<div class="page-header">
+  <div class="page-header-left">
+    {% if eyebrow_href %}
+      <p class="eyebrow"><a href="{{ eyebrow_href }}" style="text-decoration:none;color:inherit;">{{ eyebrow }}</a></p>
+    {% else %}
+      <p class="eyebrow">{{ eyebrow }}</p>
+    {% endif %}
+    <h1>{{ heading }}</h1>
+    {% if subtitle %}
+      <p class="page-subtitle">{{ subtitle }}</p>
+    {% endif %}
+  </div>
+  {% if caller is defined %}
+  <div class="page-header-actions">
+    {{ caller() }}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

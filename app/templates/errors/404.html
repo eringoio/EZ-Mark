@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('errors.page_not_found_title') }}{% endblock %}
+
+{% block content %}
+  <section class="empty-state">
+    <h1>{{ _('errors.page_not_found_header') }}</h1>
+    <p>{{ _('errors.page_not_found_desc') }}</p>
+    <a class="button-primary" href="/">{{ _('errors.back_to_dashboard') }}</a>
+  </section>
+{% endblock %}

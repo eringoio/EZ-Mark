@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exam.name }} · {{ _('peer_review.scans_title') }}{% endblock %}
+
+{% block head %}
+<style>
+/* .upload-zone* styles are shared and defined globally in index.css. */
+.pr-next-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+.pr-review-badge { display:inline-flex; align-items:center; gap:4px; background:#fef3c7; color:#92400e; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:700; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set base = "/exams/" ~ exam.id ~ "/peer-review" %}
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="eyebrow"><a href="{{ base }}/builder" style="text-decoration:none;color:inherit;">{{ _('peer_review.anonymous') }}</a></p>
+    <h1>{{ _('peer_review.scans_title') }}</h1>
+    <p class="page-subtitle">{{ _('peer_review.scans_intro') }}</p>
+  </div>
+</div>
+
+{% if upload_errors %}
+  <div class="alert alert-error" role="alert" style="margin-bottom:var(--sp-4);">
+    {% for e in upload_errors %}<p>{{ e }}</p>{% endfor %}
+  </div>
+{% endif %}
+
+{% if not download_path %}
+  <!-- Helpful empty state: you must print the sheet (which mints the QR codes) first. -->
+  <div class="empty-state" style="padding: var(--sp-8) var(--sp-6); margin-bottom: var(--sp-5);">
+    <h3>{{ _('peer_review.scans_need_sheet') }}</h3>
+    <p>{{ _('peer_review.scans_need_sheet_desc') }}</p>
+    <a class="btn btn-primary" href="{{ base }}/builder">{{ _('peer_review.open_builder') }}</a>
+  </div>
+{% else %}
+  <!-- Upload -->
+  <section class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-header"><h2>{{ _('peer_review.upload_scans') }}</h2></div>
+    <div style="padding: var(--sp-4) var(--sp-5) var(--sp-5);">
+      <form id="pr-upload-form" method="post" action="{{ base }}/scan-batches/upload" enctype="multipart/form-data">
+        <div class="form-field" style="max-width:320px; margin-bottom: var(--sp-3);">
+          <label class="form-label">{{ _('peer_review.rater_group') }}</label>
+          <select class="form-select" name="rater_group_id" required>
+            {% for group in form.rater_groups if group.active %}
+              <option value="{{ group.id }}">{{ group.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="upload-zone" id="pr-upload-zone" onclick="document.getElementById('pr-scan-files').click()">
+          <input id="pr-scan-files" name="files" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple required onchange="prFilesChosen(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;color:var(--clr-muted);margin-bottom:var(--sp-3);">
+            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+          <p class="upload-zone-label">{{ _('scans.drop_or_click') }}</p>
+          <p class="upload-zone-hint">PDF (multi-page ok), JPG, PNG &mdash; {{ _('scans.multiple_hint') }}</p>
+          <p class="upload-chosen" id="pr-upload-chosen" style="display:none;"></p>
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin-top:var(--sp-3);">
+          <button class="btn btn-primary" type="submit" id="pr-upload-submit">{{ _('peer_review.upload_batch') }}</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Guided next step -->
+  {% if progress.total_ratings %}
+    <section class="panel" style="margin-bottom: var(--sp-5);">
+      <div class="panel-header"><h2>{{ _('peer_review.next_step') }}</h2></div>
+      <div class="panel-body pr-next-actions">
+        {% if progress.needs_review %}
+          <a class="btn btn-primary" href="{{ base }}/review">
+            {{ _('peer_review.go_to_review') }}
+            <span class="pr-review-badge">{{ progress.needs_review }}</span>
+          </a>
+        {% elif progress.ready_to_score %}
+          <form method="post" action="{{ base }}/results/recalculate" style="margin:0;">
+            <button class="btn btn-primary" type="submit">{{ _('peer_review.recalculate') }}</button>
+          </form>
+        {% endif %}
+        {% if progress.has_results %}
+          <a class="btn btn-secondary" href="/exams/{{ exam.id }}/results">{{ _('peer_review.view_results') }}</a>
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+{% endif %}
+
+<!-- Batches -->
+<section class="panel">
+  <div class="panel-header"><h2>{{ _('peer_review.batches') }}</h2></div>
+  {% if batches %}
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>{{ _('peer_review.group') }}</th><th>{{ _('peer_review.file') }}</th><th>{{ _('peer_review.status') }}</th><th>{{ _('peer_review.pages') }}</th><th>{{ _('peer_review.problems') }}</th></tr>
+      </thead>
+      <tbody>
+        {% for batch in batches %}
+          <tr>
+            <td>{{ batch.id }}</td>
+            <td>{{ batch.rater_group.name }}</td>
+            <td>{{ batch.uploaded_file_name }}</td>
+            <td>{{ batch.status }}</td>
+            <td>{{ batch.detected_pages }} / {{ batch.total_pages }}</td>
+            <td>{{ batch.problem_pages }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state" style="padding: var(--sp-8) var(--sp-6);">
+      <h3>{{ _('peer_review.no_batches') }}</h3>
+    </div>
+  {% endif %}
+</section>
+
+<script>
+function prFilesChosen(input) {
+  var chosen = document.getElementById('pr-upload-chosen');
+  if (!input.files.length) { chosen.style.display = 'none'; return; }
+  var names = Array.prototype.map.call(input.files, function (f) { return f.name; });
+  chosen.textContent = names.length === 1 ? names[0] : names.join('\n');
+  chosen.style.display = 'block';
+}
+(function () {
+  var zone = document.getElementById('pr-upload-zone');
+  if (!zone) return;
+  var input = document.getElementById('pr-scan-files');
+  zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', function () { zone.classList.remove('drag-over'); });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (e.dataTransfer && e.dataTransfer.files.length) { input.files = e.dataTransfer.files; prFilesChosen(input); }
+  });
+  document.getElementById('pr-upload-form').addEventListener('submit', function () {
+    var btn = document.getElementById('pr-upload-submit');
+    btn.disabled = true;
+    btn.textContent = {{ _('scans.uploading')|tojson }};
+  });
+})();
+</script>
+{% endblock %}

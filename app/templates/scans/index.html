@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('scans.title') }}{% endblock %}
+
+{% block head %}
+<style>
+/* .upload-zone* styles are shared and defined globally in index.css. */
+.scan-row-ok      { border-left: 3px solid var(--clr-green, #10b981); }
+.scan-row-review  { border-left: 3px solid var(--clr-orange, #f59e0b); }
+.scan-row-nomatch { border-left: 3px solid var(--clr-border); }
+.review-count-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #fef3c7; color: #92400e;
+  border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; font-weight: 700;
+}
+.review-count-badge svg { width: 11px; height: 11px; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow"><a href="/exams/{{ exam.id }}" style="text-decoration:none;color:inherit;">{{ exam.name }}</a></p>
+      <h1>{{ _('nav.scan_review') }}</h1>
+    </div>
+  </div>
+
+  {% if upload_errors %}
+    <div class="alert alert-error" role="alert" style="margin-bottom:var(--sp-4);">
+      {% for e in upload_errors %}<p>{{ e }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Upload form -->
+  <div class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-header">
+      <h2>{{ _('scans.upload') }}</h2>
+      <p class="muted">{{ _('scans.new.desc') }}</p>
+    </div>
+    <div style="padding: var(--sp-4) var(--sp-5) var(--sp-5);">
+      <form id="upload-form" method="post"
+            action="/exams/{{ exam.id }}/scan-batches/upload"
+            enctype="multipart/form-data">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('scan-files').click()">
+          <input id="scan-files" name="files" type="file"
+                 accept=".pdf,.jpg,.jpeg,.png" multiple required
+                 onchange="onFilesChosen(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+               stroke-linecap="round" stroke-linejoin="round"
+               style="width:40px;height:40px;color:var(--clr-muted);margin-bottom:var(--sp-3);">
+            <polyline points="16 16 12 12 8 16"/>
+            <line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+          <p class="upload-zone-label">{{ _('scans.drop_or_click') }}</p>
+          <p class="upload-zone-hint">PDF (multi-page ok), JPG, PNG &mdash; {{ _('scans.multiple_hint') }}</p>
+          <p class="upload-chosen" id="upload-chosen" style="display:none;"></p>
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin-top:var(--sp-3);">
+          <button class="btn btn-primary" type="submit" id="upload-submit">{{ _('scans.upload_process') }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  {% if page_rows %}
+    <div class="panel">
+      <div class="panel-header">
+        <h2>{{ _('scans.results_header') }}</h2>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ _('scans.results.student') }}</th>
+            <th>{{ _('scans.results.sheet') }}</th>
+            <th>{{ _('scans.results.score') }}</th>
+            <th>{{ _('scans.results.review') }}</th>
+            <th>{{ _('common.action') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for group, title in [("ready", "Ready"), ("needs_check", "Needs teacher check"), ("needs_assignment", "Needs assignment"), ("duplicates", "Duplicates")] %}
+          <tr><th colspan="5" style="background:var(--clr-surface-2);">{{ title }}</th></tr>
+          {% for row in page_rows if row.group == group %}
+            {% if row.review_status == "duplicate_pending" %}
+              <tr class="scan-row-review">
+                <td>
+                  <strong>Duplicate scan</strong>
+                  <span class="muted text-sm" style="display:block;">{{ row.student_name }} · {{ row.student_number }}</span>
+                </td>
+                <td>{{ row.sheet_name }}</td>
+                <td colspan="2">{{ _('scans.duplicate_sheet') }}</td>
+                <td>
+                  <form method="post" action="/scanned-pages/{{ row.page.id }}/duplicates/replace" style="display:inline-block; margin:0;">
+                    <button class="btn btn-primary btn-sm" type="submit">Use new scan</button>
+                  </form>
+                  <form method="post" action="/scanned-pages/{{ row.page.id }}/duplicates/keep-old" style="display:inline-block; margin:0;">
+                    <button class="btn btn-secondary btn-sm" type="submit">Keep old scan</button>
+                  </form>
+                  <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="/scanned-pages/{{ row.page.id }}/image">Open new</a>
+                  {% if row.page.duplicate_of_page_id %}
+                    <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="/scanned-pages/{{ row.page.duplicate_of_page_id }}/image">Open old</a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% elif row.review_status in ["replaced", "ignored_duplicate"] %}
+            {% elif not row.qr_matched %}
+              <tr class="scan-row-nomatch">
+                <td>
+                  {% if row.qr_status == "blank" %}
+                    <strong>{{ _('scans.blank.title') }}</strong>
+                    <span class="muted text-sm" style="display:block;">{{ row.sheet_name }} · {{ _('scans.blank.choose_student') }}</span>
+                  {% elif row.qr_status == "wrong_exam" %}
+                    <strong>Wrong test session</strong>
+                    <span class="muted text-sm" style="display:block;">This page was printed for another test session. You can still assign it to a student in this session if the student used the wrong marksheet.</span>
+                  {% else %}
+                    <strong>{{ _('scans.results.unmatched') }}</strong>
+                    <span class="muted text-sm" style="display:block;">{{ _('scans.results.no_qr') }}</span>
+                  {% endif %}
+                </td>
+                <td colspan="3">
+                  <form method="post" action="/scanned-pages/{{ row.page.id }}/map" class="form-actions" style="justify-content:flex-start; gap: var(--sp-2); margin:0; flex-wrap:wrap;">
+                    <label class="text-sm">
+                      {{ _('scans.results.student') }}
+                      <select name="student_id" required>
+                        {% for link in included_links %}
+                          <option value="{{ link.student_id }}">{{ link.student.student_number }} · {{ link.student.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </label>
+                    <label class="text-sm">
+                      {{ _('scans.results.sheet') }}
+                      <select name="physical_sheet_id" required>
+                        {% for sheet in physical_sheets %}
+                          <option value="{{ sheet.id }}"
+                                  {% if row.page.physical_sheet_id == sheet.id %}selected{% endif %}>
+                            {{ sheet.sheet_name }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </label>
+                    <button class="btn btn-primary btn-sm" type="submit">{{ _('scans.results.save_mapping') }}</button>
+                  </form>
+                </td>
+                <td>
+                  <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener"
+                     href="/scanned-pages/{{ row.page.id }}/image">
+                    {{ _('scans.results.open_image') }}
+                  </a>
+                </td>
+              </tr>
+            {% elif row.data_problem_count > 0 %}
+              <tr class="scan-row-review">
+                <td>
+                  <span class="font-bold">{{ row.student_name }}</span>
+                  <span class="muted text-sm" style="display:block;">{{ row.student_number }}</span>
+                </td>
+                <td>{{ row.sheet_name }}</td>
+                <td>
+                  <span class="font-bold">{{ row.correct }}</span>
+                  <span class="muted"> / {{ row.total }}</span>
+                </td>
+                <td>
+                  <span class="review-count-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    データ修復 {{ row.data_problem_count }}
+                  </span>
+                </td>
+                <td>
+                  {% if row.first_data_problem_id %}
+                    <a class="btn btn-primary btn-sm"
+                       href="/exams/{{ exam.id }}/review?response_id={{ row.first_data_problem_id }}">
+                      確認
+                    </a>
+                  {% endif %}
+                  <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener"
+                     href="/scanned-pages/{{ row.page.id }}/image">
+                    {{ _('scans.results.open_image') }}
+                  </a>
+                </td>
+              </tr>
+            {% elif row.needs_review > 0 %}
+              <tr class="scan-row-review">
+                <td>
+                  <span class="font-bold">{{ row.student_name }}</span>
+                  <span class="muted text-sm" style="display:block;">{{ row.student_number }}</span>
+                </td>
+                <td>{{ row.sheet_name }}</td>
+                <td>
+                  <span class="font-bold">{{ row.correct }}</span>
+                  <span class="muted"> / {{ row.total }}</span>
+                </td>
+                <td>
+                  <span class="review-count-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    {{ row.needs_review }}
+                  </span>
+                </td>
+                <td>
+                  {% if row.first_review_id %}
+                    <a class="btn btn-primary btn-sm"
+                       href="/exams/{{ exam.id }}/review?response_id={{ row.first_review_id }}">
+                      {{ _('scans.results.action_review') }}
+                    </a>
+                  {% endif %}
+                  <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener"
+                     href="/scanned-pages/{{ row.page.id }}/image">
+                    {{ _('scans.results.open_image') }}
+                  </a>
+                </td>
+              </tr>
+            {% else %}
+              <tr class="scan-row-ok">
+                <td>
+                  <span class="font-bold">{{ row.student_name }}</span>
+                  <span class="muted text-sm" style="display:block;">{{ row.student_number }}</span>
+                </td>
+                <td>{{ row.sheet_name }}</td>
+                <td>
+                  <span class="font-bold">{{ row.correct }}</span>
+                  <span class="muted"> / {{ row.total }}</span>
+                </td>
+                <td><span class="muted text-sm">—</span></td>
+                <td>
+                  <a class="btn btn-secondary btn-sm"
+                     href="/exams/{{ exam.id }}/review?scanned_page_id={{ row.page.id }}">
+                    {{ _('scans.results.action_view') }}
+                  </a>
+                  <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener"
+                     href="/scanned-pages/{{ row.page.id }}/image">
+                    {{ _('scans.results.open_image') }}
+                  </a>
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 16 12 12 8 16"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+      </div>
+      <h3>{{ _('scans.empty') }}</h3>
+      <p>{{ _('scans.empty_desc') }}</p>
+    </div>
+  {% endif %}
+
+  {% if exam.scan_batches %}
+    <details class="panel" style="margin-top: var(--sp-5);">
+      <summary style="padding: var(--sp-4) var(--sp-5); cursor: pointer; font-weight: 600;">
+        {{ _('scans.uploads.header') }} ({{ exam.scan_batches|length }})
+      </summary>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ _('scans.uploads.file') }}</th>
+            <th>{{ _('scans.uploads.pages') }}</th>
+            <th>{{ _('common.action') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for batch in exam.scan_batches %}
+            <tr>
+              <td>
+                <span class="font-bold">{{ batch.uploaded_file_name }}</span>
+                <span class="muted text-sm" style="display:block;">{{ batch.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</span>
+              </td>
+              <td>{{ batch.total_pages }}</td>
+              <td>
+                <a class="btn btn-secondary btn-sm" target="_blank" rel="noopener"
+                   href="/scan-batches/{{ batch.id }}/uploaded-file">
+                  {{ _('scans.uploads.open_original') }}
+                </a>
+                <form method="post" action="/scan-batches/{{ batch.id }}/delete"
+                      style="display:inline-block; margin:0;"
+                      data-confirm="{{ _('scans.uploads.delete_confirm') }}">
+                  <button class="btn btn-secondary btn-sm" type="submit" style="color: var(--clr-danger);">
+                    {{ _('common.delete') }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div style="padding: var(--sp-3) var(--sp-5) var(--sp-4); display:flex; gap: var(--sp-2); align-items:center; flex-wrap:wrap;">
+        <form method="post" action="/exams/{{ exam.id }}/scans/reprocess" style="margin:0;">
+          <button class="btn btn-secondary btn-sm" type="submit">{{ _('scans.uploads.reprocess_unmatched') }}</button>
+        </form>
+        <form method="post" action="/exams/{{ exam.id }}/scans/reprocess-full" style="margin:0;"
+              data-confirm="{{ _('scans.uploads.reprocess_full_confirm') }}">
+          <button class="btn btn-secondary btn-sm" type="submit" style="color: var(--clr-danger);">
+            {{ _('scans.uploads.reprocess_full') }}
+          </button>
+        </form>
+        <span class="muted text-sm">{{ _('scans.uploads.reprocess_hint') }}</span>
+      </div>
+    </details>
+  {% endif %}
+
+<script>
+function onFilesChosen(input) {
+  var chosen = document.getElementById('upload-chosen');
+  if (input.files.length === 0) {
+    chosen.style.display = 'none';
+    return;
+  }
+  var names = Array.from(input.files).map(function(f) { return f.name; });
+  var label = names.length === 1 ? names[0] : names.length + ' files selected';
+  chosen.textContent = label;
+  chosen.style.display = 'block';
+}
+
+(function () {
+  var zone = document.getElementById('upload-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', function () {
+    zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    var input = document.getElementById('scan-files');
+    if (e.dataTransfer && e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      onFilesChosen(input);
+    }
+  });
+
+  document.getElementById('upload-form').addEventListener('submit', function () {
+    var btn = document.getElementById('upload-submit');
+    btn.disabled = true;
+    btn.textContent = '{{ _("scans.uploading") }}';
+  });
+})();
+</script>
+{% endblock %}

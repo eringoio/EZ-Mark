@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exam.name }} · {{ _('peer_review.review_queue') }}{% endblock %}
+
+{% block head %}
+<style>
+body .content-body { width: 100%; max-width: none; padding-left: var(--sp-5); padding-right: var(--sp-5); }
+.review-workspace { grid-template-columns: 1fr 320px; }
+.review-image-body { align-items: flex-start; padding: var(--sp-2); overflow: auto; }
+.review-image-body .review-image-wrapper { display: block; width: 100%; }
+.review-image-body img { width: 100%; height: auto; max-height: none; }
+.pr-correct-actions { display:flex; gap:6px; flex-wrap:wrap; padding: var(--sp-3); }
+.pr-correct-actions form { margin:0; }
+</style>
+<script src="/static/js/peer-review-review.js" defer></script>
+{% endblock %}
+
+{% block content %}
+{% set base = "/exams/" ~ exam.id ~ "/peer-review" %}
+<div class="page-header">
+  <div class="page-header-left">
+    <p class="eyebrow"><a href="{{ base }}/scan-batches" style="text-decoration:none;color:inherit;">{{ _('peer_review.anonymous') }}</a></p>
+    <h1>{{ _('peer_review.review_queue') }}</h1>
+    {% if problem_count %}
+      <p class="page-subtitle"><span style="color: var(--clr-orange); font-weight:700;">{{ problem_count }}</span> {{ _('peer_review.ratings_needing_review') }}</p>
+    {% else %}
+      <p class="page-subtitle">{{ _('peer_review.none_need_review') }}</p>
+    {% endif %}
+  </div>
+  <div class="page-header-actions">
+    <a class="btn btn-secondary" href="{{ base }}/scan-batches">{{ _('peer_review.scans_title') }}</a>
+    <a class="btn btn-secondary" href="/exams/{{ exam.id }}/results">{{ _('peer_review.view_results') }}</a>
+  </div>
+</div>
+
+{% if not problem_count %}
+  <!-- All ratings resolved: clear path forward. -->
+  <div class="panel">
+    <div class="empty-state" style="padding: var(--sp-10) var(--sp-8);">
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3>{{ _('peer_review.review_complete') }}</h3>
+      <p>{{ _('peer_review.review_complete_desc') }}</p>
+      <form method="post" action="{{ base }}/results/recalculate">
+        <button class="btn btn-primary" type="submit">{{ _('peer_review.recalculate') }}</button>
+      </form>
+    </div>
+  </div>
+{% else %}
+  <div class="review-workspace">
+    <!-- LEFT: scanned page with bubble overlay -->
+    <div class="review-image-panel">
+      <div class="review-image-header">
+        <h3>{{ submission_label or _('peer_review.review_queue') }}</h3>
+        <span style="font-size:12px; color:var(--clr-muted);">
+          {{ _('peer_review.legend_problem') }}
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(220,38,38,.7);margin:0 4px 0 2px;vertical-align:middle;"></span>
+          {{ _('peer_review.legend_ok') }}
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(5,150,105,.7);margin:0 4px 0 2px;vertical-align:middle;"></span>
+          {{ _('peer_review.legend_current') }}
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--clr-primary);margin:0 4px 0 2px;vertical-align:middle;"></span>
+        </span>
+      </div>
+      <div class="review-image-body">
+        {% if image_url %}
+          <script type="application/json" id="pr-review-cmap">{{ coordinate_map | tojson }}</script>
+          <script type="application/json" id="pr-review-rmap">{{ rating_map | tojson }}</script>
+          <div class="review-image-wrapper" id="pr-review-wrapper"
+               data-base="{{ base }}"
+               data-blank-label="{{ _('peer_review.blank') }}"
+               data-invalid-label="{{ _('peer_review.invalid') }}">
+            <img src="{{ image_url }}" alt="{{ submission_label }}" id="pr-review-image">
+            <div class="review-bubble-overlay" id="pr-review-overlay"></div>
+          </div>
+        {% else %}
+          <div class="review-image-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p>{{ _('peer_review.review_no_image') }}</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RIGHT: current item + queue -->
+    <div class="review-right-panel">
+      {% if current %}
+        <div class="review-item-card">
+          <div class="panel-header"><h2>{{ _('peer_review.review_current') }}</h2></div>
+          <dl class="review-detail-grid">
+            <div class="review-detail-item">
+              <dt>{{ _('peer_review.target') }}</dt>
+              <dd>{{ current_target_label or "—" }}</dd>
+            </div>
+            <div class="review-detail-item">
+              <dt>{{ _('peer_review.competency') }}</dt>
+              <dd>{{ current_competency.name if current_competency else "—" }}</dd>
+            </div>
+            <div class="review-detail-item">
+              <dt>{{ _('peer_review.group') }}</dt>
+              <dd>{{ current.rater_group.name if current and current.rater_group else "—" }}</dd>
+            </div>
+            <div class="review-detail-item">
+              <dt>{{ _('review.current.detected') }}</dt>
+              <dd>{{ current.detected_score if current.detected_score is not none else "—" }}</dd>
+            </div>
+            <div class="review-detail-item">
+              <dt>{{ _('review.current.problem') }}</dt>
+              <dd><span class="status-badge needs-review">{{ current.status|replace("_", " ")|title }}</span></dd>
+            </div>
+          </dl>
+          <div class="pr-correct-actions">
+            {% for score in range(form.score_min, form.score_max + 1) %}
+              <form method="post" action="{{ base }}/review/{{ current.id }}">
+                <input type="hidden" name="score" value="{{ score }}">
+                <input type="hidden" name="status" value="reviewed">
+                <button class="review-choice-btn" type="submit">{{ score }}</button>
+              </form>
+            {% endfor %}
+            <form method="post" action="{{ base }}/review/{{ current.id }}">
+              <input type="hidden" name="status" value="blank">
+              <button class="review-choice-btn" type="submit">{{ _('peer_review.blank') }}</button>
+            </form>
+            <form method="post" action="{{ base }}/review/{{ current.id }}">
+              <input type="hidden" name="status" value="invalid">
+              <button class="review-choice-btn" type="submit" style="color: var(--clr-danger);">{{ _('peer_review.invalid') }}</button>
+            </form>
+          </div>
+        </div>
+        {% if submission and bulk_page_remaining_count %}
+          <div class="panel">
+            <div class="panel-header"><h2>{{ _('review.bulk_page.title') }}</h2></div>
+            <div class="panel-body">
+              <p class="text-sm muted">{{ _('review.bulk_page.description') }}</p>
+              <form method="post"
+                    action="{{ base }}/submission-pages/{{ submission.id }}/mark-remaining-blank"
+                    onsubmit="return confirm('{{ _('review.bulk_page.confirm_blank') }}');"
+                    style="margin-top: var(--sp-3);">
+                <button class="btn btn-secondary btn-sm" type="submit">
+                  {{ _('review.bulk_page.remaining_blank', count=bulk_page_remaining_count) }}
+                </button>
+              </form>
+              <form method="post"
+                    action="{{ base }}/submission-pages/{{ submission.id }}/mark-remaining-invalid"
+                    onsubmit="return confirm('{{ _('review.bulk_page.confirm_invalid') }}');"
+                    style="margin-top: var(--sp-2);">
+                <button class="btn btn-secondary btn-sm" type="submit">
+                  {{ _('review.bulk_page.remaining_invalid', count=bulk_page_remaining_count) }}
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <div class="review-queue-panel">
+        <div class="panel-header"><h2>{{ _('peer_review.review_queue') }} ({{ queue|length }})</h2></div>
+        <table class="data-table">
+          <thead>
+            <tr><th>{{ _('peer_review.target') }}</th><th>{{ _('peer_review.competency') }}</th><th>{{ _('peer_review.status') }}</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for item in queue %}
+              <tr class="{% if item.is_current %}review-queue-active{% endif %}">
+                <td class="text-sm">{{ item.target }}</td>
+                <td class="text-sm">{{ item.competency }}</td>
+                <td><span class="status-badge needs-review">{{ item.status|replace("_", " ")|title }}</span></td>
+                <td>
+                  {% if not item.is_current %}
+                    <a class="btn btn-secondary btn-sm" href="{{ base }}/review?rating_id={{ item.id }}">{{ _('review.action.select') }}</a>
+                  {% else %}
+                    <span class="text-xs muted">{{ _('review.action.current') }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.name }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">{{ _('templates.detail.eyebrow') }}</p>
+      <h1>{{ template.name }}</h1>
+      <div style="display:flex; align-items:center; gap: var(--sp-3); margin-top: var(--sp-2);">
+        {% if template.assessment_type == "peer_review" %}
+          <span class="type-pill peer">{{ _('exams.peer_review') }}</span>
+        {% else %}
+          <span class="type-pill test">{{ _('exams.generic_test') }}</span>
+        {% endif %}
+        <span class="status-badge" data-status="{{ template.template_status }}">
+          {{ _('templates.status.' ~ template.template_status) }}
+        </span>
+        <span class="muted text-sm">{{ _('templates.detail.definition') }}</span>
+      </div>
+    </div>
+    {% if template.assessment_type == "peer_review" %}
+      {% set is_ready = peer.ready %}
+    {% else %}
+      {% set missing_questions = template.questions|length == 0 %}
+      {% set missing_answers = template.questions|selectattr("correct_answer", "none")|list|length > 0 %}
+      {% set missing_sections = template.questions|selectattr("scoring_section_id", "none")|list|length > 0 %}
+      {% set is_ready = template.questions|length > 0 and not missing_answers and not missing_sections %}
+    {% endif %}
+    <div class="page-header-actions">
+      {% if template.template_status == "archived" %}
+        <span class="muted text-sm">{{ _('templates.archived_notice') }}</span>
+        <form method="post" action="/templates/{{ template.id }}/duplicate">
+          <button class="btn btn-primary" type="submit">{{ _('templates.action.duplicate_as_active') }}</button>
+        </form>
+        <a class="btn btn-secondary" href="/templates/{{ template.id }}/portable-export">{{ _('packages.export_template') }}</a>
+        <form method="post" action="/templates/{{ template.id }}/delete"
+              data-confirm="{{ _('templates.delete_confirm') }}">
+          <button class="btn btn-secondary" type="submit">{{ _('common.delete') }}</button>
+        </form>
+      {% else %}
+        <a class="btn btn-secondary" href="/templates/{{ template.id }}/edit">{{ _('common.edit') }}</a>
+        {% if template.assessment_type == "peer_review" %}
+          <a class="btn btn-secondary" href="/templates/{{ template.id }}/peer-review">{{ _('templates.action.open_peer_builder') }}</a>
+          {% if is_ready %}
+            <a class="btn btn-primary" href="/templates/{{ template.id }}/runs/new">{{ _('peer_review.create_session') }}</a>
+          {% endif %}
+        {% else %}
+          <a class="btn btn-secondary" href="/templates/{{ template.id }}/edit">{{ _('common.edit') }}</a>
+          <form method="post" action="/templates/{{ template.id }}/duplicate">
+            <button class="btn btn-secondary" type="submit">{{ _('templates.detail.duplicate') }}</button>
+          </form>
+          {% if is_ready %}
+            <a class="btn btn-secondary" href="/templates/{{ template.id }}/builder">{{ _('templates.action.open_builder') }}</a>
+            <a class="btn btn-primary" href="/templates/{{ template.id }}/runs/new">{{ _('templates.detail.create_run') }}</a>
+          {% else %}
+            <a class="btn btn-primary" href="/templates/{{ template.id }}/builder">{{ _('templates.action.continue_setup') }}</a>
+          {% endif %}
+        {% endif %}
+        <a class="btn btn-secondary" href="/templates/{{ template.id }}/portable-export">{{ _('packages.export_template') }}</a>
+        <form method="post" action="/templates/{{ template.id }}/archive"
+              data-confirm="{{ _('templates.archive_confirm') }}">
+          <button class="btn btn-secondary" type="submit">{{ _('templates.action.archive') }}</button>
+        </form>
+        <form method="post" action="/templates/{{ template.id }}/delete"
+              data-confirm="{{ _('templates.delete_confirm') }}">
+          <button class="btn btn-secondary" type="submit">{{ _('common.delete') }}</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <section class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-header">
+      <h2>
+        {% if template.assessment_type == "peer_review" %}
+          {% if is_ready %}{{ _('templates.detail.peer_ready') }}{% else %}{{ _('templates.detail.peer_setup') }}{% endif %}
+        {% else %}
+          {% if is_ready %}{{ _('templates.detail.ready_to_use') }}{% else %}{{ _('templates.detail.setup_status') }}{% endif %}
+        {% endif %}
+      </h2>
+      <p class="muted">{{ _('templates.detail.run_count', count=runs|length) }}</p>
+    </div>
+    <div class="panel-body">
+      {% if template.assessment_type == "peer_review" %}
+        <p class="text-sm" style="margin-top:0;">{{ _('templates.detail.peer_intro') }}</p>
+        {% if peer.competencies_count > 0 %}
+          <p class="text-sm">✓ {{ _('templates.detail.peer_status_competencies_ok') }}</p>
+        {% else %}
+          <p class="text-sm">{{ _('templates.detail.peer_status_competencies_missing') }}</p>
+        {% endif %}
+        {% if peer.score_min < peer.score_max %}
+          <p class="text-sm">✓ {{ _('templates.detail.peer_status_scale_ok') }}</p>
+        {% else %}
+          <p class="text-sm">{{ _('templates.detail.peer_status_scale_invalid') }}</p>
+        {% endif %}
+        <p class="text-sm">✓ {{ _('templates.detail.peer_status_per_page_ok') }}</p>
+      {% else %}
+        <p class="text-sm" style="margin-top:0;">{{ _('templates.detail.status_type_ok') }}</p>
+        {% if missing_questions %}
+          <p class="text-sm">{{ _('templates.detail.status_key_missing') }}</p>
+        {% else %}
+          <p class="text-sm">{{ _('templates.detail.status_questions_ok', count=template.questions|length) }}</p>
+        {% endif %}
+        {% if missing_sections %}
+          <p class="text-sm">{{ _('templates.detail.status_sections_missing') }}</p>
+        {% else %}
+          <p class="text-sm">{{ _('templates.detail.status_sections_ok') }}</p>
+        {% endif %}
+        {% if missing_answers %}
+          <p class="text-sm">{{ _('templates.detail.status_answers_missing') }}</p>
+        {% elif template.questions %}
+          <p class="text-sm">{{ _('templates.detail.status_answers_ok') }}</p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Key metrics -->
+  {% if template.assessment_type == "peer_review" %}
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.detail.peer_competencies') }}</div>
+        <div class="metric-card-value">{{ peer.competencies_count }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.detail.peer_scale') }}</div>
+        <div class="metric-card-value">{{ peer.score_min }}–{{ peer.score_max }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.detail.peer_students_per_page') }}</div>
+        <div class="metric-card-value">{{ peer.students_per_page }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.detail.peer_sessions') }}</div>
+        <div class="metric-card-value">{{ runs|length }}</div>
+      </div>
+    </div>
+  {% else %}
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.detail.question_count') }}</div>
+        <div class="metric-card-value">{{ template.questions|length }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.detail.physical_sheets') }}</div>
+        <div class="metric-card-value">{{ template.physical_sheets|length }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.detail.scoring_sections') }}</div>
+        <div class="metric-card-value">{{ template.scoring_sections|length }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('templates.table.runs') }}</div>
+        <div class="metric-card-value">{{ runs|length }}</div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="two-column">
+
+    <!-- Template info -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <h2>{{ _('templates.detail.info') }}</h2>
+        </div>
+        <div class="detail-grid">
+          <div><dt>{{ _('templates.table.type') }}</dt><dd>{{ _('exams.' ~ template.assessment_type) }}</dd></div>
+          <div><dt>{{ _('templates.table.status') }}</dt><dd><span class="status-badge" data-status="{{ template.template_status }}">{{ _('templates.status.' ~ template.template_status) }}</span></dd></div>
+          <div><dt>{{ _('templates.detail.question_count') }}</dt><dd>{{ template.questions|length }}</dd></div>
+        </div>
+        {% if template.template_description %}
+          <div class="panel-body">
+            <p class="text-sm" style="color: var(--clr-text-2);">{{ template.template_description }}</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Physical sheets -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>{{ _('templates.detail.physical_sheets') }}</h2>
+        </div>
+        {% if template.physical_sheets %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ _('templates.detail.sheet') }}</th>
+                <th>{{ _('templates.detail.per_sheet') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sheet in template.physical_sheets %}
+                <tr>
+                  <td>{{ sheet.sheet_name }}</td>
+                  <td>{{ sheet.questions|length }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state" style="padding: var(--sp-6);">
+            <p style="margin:0; color: var(--clr-muted);">—</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Scoring sections + Runs -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <h2>{{ _('templates.detail.scoring_sections') }}</h2>
+        </div>
+        {% if template.scoring_sections %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ _('templates.detail.section') }}</th>
+                <th>{{ _('templates.detail.per_section') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for section in template.scoring_sections %}
+                <tr>
+                  <td>{{ section.name }}</td>
+                  <td>{{ section.questions|length }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state" style="padding: var(--sp-6);">
+            <p style="margin:0; color: var(--clr-muted);">—</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>{{ _('templates.detail.recent_runs') }}</h2>
+          <a class="btn btn-primary btn-sm" href="/templates/{{ template.id }}/runs/new">
+            {{ _('templates.detail.create_run') }}
+          </a>
+        </div>
+        {% if runs %}
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ _('templates.detail.run_name') }}</th>
+                <th>{{ _('templates.detail.run_date') }}</th>
+                <th>{{ _('templates.detail.run_status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for run in runs %}
+                <tr>
+                  <td><a class="table-link" href="/exams/{{ run.id }}">{{ run.name }}</a></td>
+                  <td class="muted text-sm">{{ run.exam_date or "—" }}</td>
+                  <td><span class="status-badge" data-status="{{ run.status }}">{{ _('exams.status.' ~ run.status) }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state" style="padding: var(--sp-6);">
+            <p style="margin:0; font-size:14px; color: var(--clr-muted);">{{ _('templates.detail.no_runs') }}</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+{% endblock %}

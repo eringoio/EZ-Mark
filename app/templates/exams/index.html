@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('nav.sessions') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">EZ Mark</p>
+      <h1>{{ _('nav.sessions') }}</h1>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-secondary" href="/sessions/import-package">{{ _('packages.import_session') }}</a>
+      <a class="btn btn-primary" href="/templates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        {{ _('exams.new') }}
+      </a>
+    </div>
+  </div>
+
+  {% if filters %}{% include "partials/list_filters.html" %}{% endif %}
+
+  {% if exams %}
+    {# Cards sit OUTSIDE the bulk form: each card has its own <form>s in the "…" menu, and
+       nested forms are invalid HTML. Checkboxes/footer below associate with the bulk form by
+       id via the `form` attribute instead. #}
+    <div class="card-grid">
+      {% for exam in exams %}
+        {% set selectable = true %}
+        {% set bulk_form_id = "session-bulk-form" %}
+        {% include "partials/exam_summary_card.html" %}
+      {% endfor %}
+    </div>
+    <form method="post" id="session-bulk-form">
+      <input type="hidden" name="return_to" value="{{ request.url.path }}?{{ request.url.query }}">
+      {% set bulk_form_id = "session-bulk-form" %}
+      {% set bulk_archive_action = "/exams/bulk/archive" %}
+      {% set bulk_delete_action = "/exams/bulk/delete" %}
+      {% set bulk_archive_confirm = _('bulk.archive_sessions_confirm') %}
+      {% set bulk_delete_confirm = _('bulk.delete_sessions_confirm') %}
+      {% include "partials/bulk_selection_footer.html" %}
+    </form>
+    {% include "partials/pagination.html" %}
+  {% elif filters and filters.date %}
+    {% set has_fallback = month_fallback_sessions|length > 0 %}
+    {% include "partials/date_fallback_notice.html" %}
+    {% if has_fallback %}
+      <div class="card-grid">
+        {% for exam in month_fallback_sessions %}{% include "partials/exam_summary_card.html" %}{% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <h3>{{ _('dashboard.no_assessments') }}</h3>
+      <p>{{ _('exams.empty') }}</p>
+      <a class="btn btn-primary" href="/templates">{{ _('nav.templates') }}</a>
+    </div>
+  {% endif %}
+{% endblock %}

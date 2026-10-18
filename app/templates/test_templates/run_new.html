@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('templates.run.title') }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow"><a href="/templates/{{ template.id }}" style="text-decoration:none; color:inherit;">{{ template.name }}</a></p>
+      <h1>{{ _('templates.run.header') }}</h1>
+      <p class="page-subtitle">{{ _('flow.step_1_of_3_details') }}</p>
+    </div>
+  </div>
+
+  <div class="flow-stepper">
+    <div class="is-current"><span>1</span> {{ _('flow.details') }}</div>
+    <div><span>2</span> {{ _('flow.roster') }}</div>
+    <div><span>3</span> {{ _('flow.generate') }}</div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-error" role="alert">
+      {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="session-flow-summary">
+    <div>
+      <span class="muted text-sm">{{ _('templates.run.selected_template') }}</span>
+      <strong>{{ template.name }}</strong>
+    </div>
+    {% if template.assessment_type == "peer_review" %}
+      <div>
+        <span class="muted text-sm">{{ _('peer_review.competencies') }}</span>
+        <strong>{{ peer.competencies_count }}</strong>
+      </div>
+      <div>
+        <span class="muted text-sm">{{ _('peer_review.rating_scale') }}</span>
+        <strong>{{ peer.score_min }}–{{ peer.score_max }}</strong>
+      </div>
+      <div>
+        <span class="muted text-sm">{{ _('peer_review.students_per_page') }}</span>
+        <strong>{{ peer.students_per_page }}</strong>
+      </div>
+    {% else %}
+      <div>
+        <span class="muted text-sm">{{ _('templates.table.questions') }}</span>
+        <strong>{{ template.questions|length }}</strong>
+      </div>
+      <div>
+        <span class="muted text-sm">{{ _('templates.run.sheets') }}</span>
+        <strong>{{ template.physical_sheets|length }}</strong>
+      </div>
+    {% endif %}
+  </div>
+
+  <form class="form-panel" method="post" action="/templates/{{ template.id }}/runs/new">
+    <div class="form-field">
+      <label class="form-label" for="run_name">{{ _('templates.run.name') }}</label>
+      <input class="form-input" id="run_name" name="run_name"
+             value="{{ run_name if run_name else '' }}" required
+             placeholder="{{ _('templates.run.name_placeholder') }}">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="exam_date">{{ _('templates.run.date') }}</label>
+      <input class="form-input" type="date" id="exam_date" name="exam_date"
+             value="{{ exam_date if exam_date else '' }}" style="max-width:200px;">
+    </div>
+
+    <div class="form-actions">
+      <a class="btn btn-secondary" href="/templates/{{ template.id }}">{{ _('common.cancel') }}</a>
+      <button class="btn btn-primary" type="submit">{{ _('templates.run.continue_to_roster') }}</button>
+    </div>
+  </form>
+{% endblock %}

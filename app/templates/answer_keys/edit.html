@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('answer_keys.edit.title') }}{% endblock %}
+
+{% block head %}
+{% if exam.is_template %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.mksheet-group-table tbody tr').forEach(function (row) {
+    var hidden = row.querySelector('input[type="hidden"]');
+    if (!hidden) return;
+    row.querySelectorAll('.mksheet-bubble').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        row.querySelectorAll('.mksheet-bubble').forEach(function (b) {
+          b.classList.remove('is-selected');
+        });
+        btn.classList.add('is-selected');
+        hidden.value = btn.dataset.choice;
+      });
+    });
+  });
+});
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">
+        {% if exam.is_template %}
+          <a href="/templates/{{ exam.id }}" style="text-decoration:none; color:inherit;">{{ exam.name }}</a>
+        {% else %}
+          <a href="/exams/{{ exam.id }}" style="text-decoration:none; color:inherit;">{{ exam.name }}</a>
+        {% endif %}
+      </p>
+      <h1>{{ _('exams.detail.answer_key') }}</h1>
+      <p class="muted">{{ _('answer_keys.edit.desc') }}</p>
+    </div>
+    {% if exam.is_template %}
+      <a class="button-secondary" href="/templates/{{ exam.id }}/builder">{{ _('templates.action.open_builder') }}</a>
+    {% endif %}
+  </section>
+
+  {% if not exam.is_template %}
+    <div class="highlight-banner" style="margin-bottom: var(--sp-5);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;flex-shrink:0;" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ _('answer_keys.readonly.banner') }}
+      {% if exam.source_template_id %}
+        <a href="/exams/{{ exam.source_template_id }}/answer-key" style="margin-left: var(--sp-3); font-weight:700;">
+          {{ _('answer_keys.readonly.open_template') }}
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if saved %}
+    <div class="alert-success" role="status">
+      <p>{{ _('answer_keys.edit.saved') }}</p>
+    </div>
+  {% endif %}
+
+  {% if issues %}
+    <div class="alert-error" role="alert">
+      {% for issue in issues %}
+        <p>{{ issue.display_label }}: {{ issue.message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if group_errors %}
+    <div class="alert-error" role="alert">
+      {% for error in group_errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if exam.questions %}
+
+    {% if exam.is_template %}
+    <section class="panel" style="margin-bottom: var(--sp-5);">
+      <div class="panel-header">
+        <h2>{{ _('answer_keys.problem_groups.header') }}</h2>
+        <p class="muted">{{ _('answer_keys.problem_groups.desc') }}</p>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ _('answer_keys.edit.table.sheet') }}</th>
+            <th>{{ _('templates.detail.questions') }}</th>
+            <th>{{ _('answer_keys.problem_groups.counts') }}</th>
+            <th>{{ _('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sheet in exam.physical_sheets %}
+            {% set question_count = sheet_question_counts.get(sheet.id, 0) %}
+            <tr>
+              <td>{{ sheet.sheet_name }}</td>
+              <td>{{ question_count }}</td>
+              <td>
+                <form method="post" action="/exams/{{ exam.id }}/answer-key/problem-groups" id="problem-groups-{{ sheet.id }}">
+                  <input type="hidden" name="physical_sheet_id" value="{{ sheet.id }}">
+                  <input
+                    name="group_counts"
+                    value="{{ problem_group_counts.get(sheet.id, '') }}"
+                    placeholder="{% if question_count == 70 %}6,7,6,6,10,5,5,4,9,4,2,4,2{% elif question_count == 37 %}6,7,6,14,4{% else %}5,5,5{% endif %}"
+                    {% if question_count == 0 %}disabled{% endif %}
+                  >
+                </form>
+              </td>
+              <td>
+                <button
+                  class="button-secondary"
+                  type="submit"
+                  form="problem-groups-{{ sheet.id }}"
+                  {% if question_count == 0 %}disabled{% endif %}
+                >
+                  {{ _('answer_keys.problem_groups.apply') }}
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    <form method="post" action="/exams/{{ exam.id }}/answer-key/save">
+
+      {% for sheet in exam.physical_sheets %}
+        {% set groups = sheet_groups.get(sheet.id, []) %}
+        {% if groups %}
+          <div class="mksheet-sheet-section">
+            <div class="mksheet-sheet-header">
+              <span class="mksheet-sheet-title">{{ sheet.sheet_name }}</span>
+              <span class="muted text-sm">{{ sheet_question_counts.get(sheet.id, 0) }} {{ _('templates.detail.questions') }}</span>
+            </div>
+            <div class="mksheet-groups-row">
+              {% for group in groups %}
+                {% set first_q = group.questions[0] %}
+                {% set max_ch = group.max_choices %}
+                <table class="mksheet-group-table">
+                  <thead>
+                    {% if group.label %}
+                      <tr>
+                        <th class="mksheet-group-th" colspan="{{ max_ch + 1 }}">{{ group.label }}</th>
+                      </tr>
+                    {% endif %}
+                  </thead>
+                  <tbody>
+                    {% for q in group.questions %}
+                      <tr>
+                        <td class="mksheet-qno-cell">
+                          {% if exam.is_template %}
+                            <input type="hidden" name="answer_{{ q.id }}" value="{{ q.correct_answer or '' }}">
+                          {% endif %}
+                          {{ q.display_label }}
+                        </td>
+                        {% for c in range(1, q.choice_count + 1) %}
+                          <td class="mksheet-bubble-cell">
+                            {% if exam.is_template %}
+                              <button type="button"
+                                      class="mksheet-bubble {% if q.correct_answer == c|string %}is-selected{% endif %}"
+                                      data-choice="{{ c }}">{{ c }}</button>
+                            {% else %}
+                              <span class="mksheet-bubble is-readonly {% if q.correct_answer == c|string %}is-correct{% else %}is-blank{% endif %}">{{ c }}</span>
+                            {% endif %}
+                          </td>
+                        {% endfor %}
+                        {% for c in range(q.choice_count + 1, max_ch + 1) %}
+                          <td class="mksheet-bubble-cell" style="background:var(--clr-surface-2);"></td>
+                        {% endfor %}
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      {% if exam.is_template %}
+      <div class="form-actions standalone-actions">
+        <a class="button-secondary" href="/templates/{{ exam.id }}">{{ _('common.back') }}</a>
+        <button class="button-primary" type="submit">{{ _('answer_keys.edit.save') }}</button>
+      </div>
+      {% else %}
+      <div class="form-actions standalone-actions">
+        <a class="button-secondary" href="/exams/{{ exam.id }}">{{ _('common.back') }}</a>
+      </div>
+      {% endif %}
+    </form>
+
+  {% else %}
+    <div class="empty-state">
+      <h3>{{ _('answer_keys.edit.empty') }}</h3>
+      <p>{{ _('answer_keys.edit.empty_desc') }}</p>
+      {% if exam.is_template %}
+        <a class="button-primary" href="/templates/{{ exam.id }}/builder">{{ _('templates.action.open_builder') }}</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

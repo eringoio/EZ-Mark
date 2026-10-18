@@ -1,0 +1,27 @@
+{#
+  Sticky bulk-action footer for list pages (テスト管理 / テンプレート). Hidden until at least
+  one card checkbox is selected (toggled by app.js). Lives inside the listing's <form> so the
+  archive/delete buttons submit the selected `selected_ids` to the existing bulk routes.
+
+  Expects in context:
+    bulk_form_id                              — id of the bulk <form> the buttons submit
+    bulk_archive_action, bulk_delete_action   — form POST targets
+    bulk_archive_confirm, bulk_delete_confirm — confirm() messages
+#}
+{% set bulk_form_id = bulk_form_id|default('') %}
+<div class="bulk-footer" id="bulk-footer" hidden>
+  <div class="bulk-footer-inner">
+    <span class="bulk-footer-count"
+          data-bulk-count-text
+          data-bulk-count-template="{{ _('bulk.selected_count', count='{count}') }}"></span>
+    <div class="bulk-footer-actions">
+      <button class="btn btn-secondary btn-sm"{% if bulk_form_id %} form="{{ bulk_form_id }}"{% endif %}
+              formaction="{{ bulk_archive_action }}"
+              onclick="return confirm('{{ bulk_archive_confirm }}')">{{ _('bulk.archive_selected') }}</button>
+      <button class="btn btn-danger btn-sm"{% if bulk_form_id %} form="{{ bulk_form_id }}"{% endif %}
+              formaction="{{ bulk_delete_action }}"
+              onclick="return confirm('{{ bulk_delete_confirm }}')">{{ _('bulk.delete_selected') }}</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-bulk-cancel>{{ _('common.cancel') }}</button>
+    </div>
+  </div>
+</div>

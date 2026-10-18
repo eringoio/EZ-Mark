@@ -1,0 +1,85 @@
+{#
+  One template card for the /templates listing. Expects `template` (a MockExam template) in
+  context. Included from test_templates/index.html for the main list and date fallback.
+#}
+{% set is_archived = template.template_status == "archived" %}
+{% set selectable = selectable|default(false) %}
+{% set bulk_form_id = bulk_form_id|default('') %}
+<div class="summary-card{% if selectable %} is-selectable{% endif %}">
+  <div class="summary-card-header">
+    {% if selectable %}
+      <label class="card-checkbox-inline" aria-label="{{ _('bulk.select_item') }}">
+        <input type="checkbox" name="selected_ids" value="{{ template.id }}"
+               {% if bulk_form_id %}form="{{ bulk_form_id }}"{% endif %} data-card-checkbox>
+      </label>
+    {% endif %}
+    <div style="flex:1; min-width:0;">
+      <a class="summary-card-title" href="/templates/{{ template.id }}">{{ template.name }}</a>
+      <div class="summary-card-meta" style="margin-top:6px;">
+        {% if template.assessment_type == "peer_review" %}
+          <span class="type-pill peer">{{ _('exams.peer_review') }}</span>
+        {% else %}
+          <span class="type-pill test">{{ _('exams.generic_test') }}</span>
+        {% endif %}
+        <span class="status-badge" data-status="{{ template.template_status }}">
+          {{ _('templates.status.' ~ template.template_status) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-card-meta">
+    {% if template.assessment_type == "peer_review" %}
+      <span>{{ _('exams.peer_review') }}</span>
+      <span>·</span>
+    {% elif template.assessment_type == "generic_test" %}
+      <span>{{ _('exams.generic_test') }}</span>
+      <span>·</span>
+    {% endif %}
+    <span>{{ template.questions|length }} {{ _('templates.table.questions') }}</span>
+    <span>·</span>
+    <span>{{ template.template_runs|length }} {{ _('templates.table.runs') }}</span>
+  </div>
+
+  <div class="summary-card-footer">
+    <div class="summary-card-actions">
+      {% if is_archived %}
+        <a class="btn btn-secondary btn-sm" href="/templates/{{ template.id }}">{{ _('templates.action.view') }}</a>
+        <details class="more-menu">
+          <summary aria-label="{{ _('common.more_actions') }}">...</summary>
+          <div class="more-menu-popover">
+            <form method="post" action="/templates/{{ template.id }}/duplicate">
+              <button type="submit">{{ _('templates.action.duplicate_as_active') }}</button>
+            </form>
+            <a href="/templates/{{ template.id }}/portable-export">{{ _('packages.export_template') }}</a>
+            <form method="post" action="/templates/{{ template.id }}/delete"
+                  data-confirm="{{ _('templates.delete_confirm') }}">
+              <button class="is-danger" type="submit">{{ _('templates.action.delete') }}</button>
+            </form>
+          </div>
+        </details>
+      {% else %}
+        <a class="btn btn-primary btn-sm" href="/templates/{{ template.id }}/runs/new">{{ _('templates.action.start_session') }}</a>
+        <details class="more-menu">
+          <summary aria-label="{{ _('common.more_actions') }}">...</summary>
+          <div class="more-menu-popover">
+            <a href="/templates/{{ template.id }}">{{ _('templates.action.view') }}</a>
+            <a href="/templates/{{ template.id }}/edit">{{ _('common.edit') }}</a>
+            <form method="post" action="/templates/{{ template.id }}/duplicate">
+              <button type="submit">{{ _('templates.detail.duplicate') }}</button>
+            </form>
+            <a href="/templates/{{ template.id }}/portable-export">{{ _('packages.export_template') }}</a>
+            <form method="post" action="/templates/{{ template.id }}/archive"
+                  data-confirm="{{ _('templates.archive_confirm') }}">
+              <button type="submit">{{ _('templates.action.archive') }}</button>
+            </form>
+            <form method="post" action="/templates/{{ template.id }}/delete"
+                  data-confirm="{{ _('templates.delete_confirm') }}">
+              <button class="is-danger" type="submit">{{ _('templates.action.delete') }}</button>
+            </form>
+          </div>
+        </details>
+      {% endif %}
+    </div>
+  </div>
+</div>

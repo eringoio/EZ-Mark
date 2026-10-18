@@ -1,0 +1,56 @@
+{#
+  Reusable list filters for /templates, /exams, /scan-review, /insights.
+  Expects in context:
+    filters                - dict from list_filter_service.filter_context()
+    filter_action          - the GET target URL for this page (e.g. "/exams")
+    filter_date_label_key  - optional locale key for the date field label
+                             (defaults to filters.test_date; /templates passes filters.created_date)
+  Submits as a plain GET form so selected values land in the query string and the page
+  re-reads them via parse_list_filters(). Defaults: archived hidden, newest first.
+#}
+{% set date_label_key = filter_date_label_key if filter_date_label_key is defined else 'filters.test_date' %}
+<form class="filter-bar" method="get" action="{{ filter_action }}">
+  <div class="filter-field filter-field-search">
+    <label class="filter-label" for="filter-search">{{ _('filters.search') }}</label>
+    <input class="filter-input" type="search" id="filter-search" name="search"
+           value="{{ filters.search }}" placeholder="{{ _('filters.search_placeholder') }}">
+  </div>
+
+  <div class="filter-field">
+    <label class="filter-label" for="filter-type">{{ _('filters.type_label') }}</label>
+    <select class="filter-select" id="filter-type" name="type">
+      <option value="all" {% if filters.type == 'all' %}selected{% endif %}>{{ _('filters.type.all') }}</option>
+      <option value="generic_test" {% if filters.type == 'generic_test' %}selected{% endif %}>{{ _('filters.type.generic_test') }}</option>
+      <option value="peer_review" {% if filters.type == 'peer_review' %}selected{% endif %}>{{ _('filters.type.peer_review') }}</option>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label class="filter-label" for="filter-date">{{ _(date_label_key) }}</label>
+    <input class="filter-date" type="date" id="filter-date" name="date" value="{{ filters.date }}">
+  </div>
+
+  <div class="filter-field">
+    <label class="filter-label" for="filter-sort">{{ _('filters.sort_label') }}</label>
+    <select class="filter-select" id="filter-sort" name="sort">
+      <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>{{ _('filters.sort.newest') }}</option>
+      <option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>{{ _('filters.sort.oldest') }}</option>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label class="filter-label" for="filter-archived">{{ _('filters.archived_label') }}</label>
+    <select class="filter-select" id="filter-archived" name="archived">
+      <option value="hide" {% if filters.archived == 'hide' %}selected{% endif %}>{{ _('filters.archived.hide') }}</option>
+      <option value="show" {% if filters.archived == 'show' %}selected{% endif %}>{{ _('filters.archived.show') }}</option>
+      <option value="only" {% if filters.archived == 'only' %}selected{% endif %}>{{ _('filters.archived.only') }}</option>
+    </select>
+  </div>
+
+  <div class="filter-actions">
+    <button class="btn btn-primary btn-sm" type="submit">{{ _('filters.apply') }}</button>
+    {% if filters.has_active_filters %}
+      <a class="btn btn-secondary btn-sm" href="{{ filter_action }}">{{ _('filters.clear') }}</a>
+    {% endif %}
+  </div>
+</form>

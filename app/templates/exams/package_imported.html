@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('packages.imported_title') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">EZ Mark</p>
+      <h1>{{ _('packages.imported_title') }}</h1>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-body">
+      {% if qr_collision_warning_count %}
+        <div class="alert alert-warning" role="alert" style="margin-bottom: var(--sp-4);">
+          {{ _('packages.qr_collision_warning', count=qr_collision_warning_count) }}
+        </div>
+      {% endif %}
+      <div class="form-actions" style="justify-content:flex-start; flex-wrap:wrap;">
+        <a class="btn btn-secondary" href="/templates/{{ template.id }}">{{ _('packages.imported_template_link') }}</a>
+        <a class="btn btn-primary" href="/exams/{{ session.id }}">{{ _('packages.imported_session_link') }}</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

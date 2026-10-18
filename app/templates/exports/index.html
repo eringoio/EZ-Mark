@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('exports.title') }}{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('nav.exports') }}</p>
+      <h1>{{ exam.name }}</h1>
+      <p class="muted">{{ _('exports.desc') }}</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>{{ _('exports.download') }}</h2>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ _('exports.table.export') }}</th>
+          <th>XLSX</th>
+          <th>CSV</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if exam.assessment_type == "peer_review" %}
+          <tr>
+            <td>Peer evaluation summary</td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/peer-review/exports/summary.xlsx">XLSX</a></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>Raw anonymous ratings</td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/peer-review/exports/raw-ratings.xlsx">XLSX</a></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>Group results</td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/peer-review/exports/group-results.xlsx">XLSX</a></td>
+            <td>—</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td>{{ _('exports.table.student_summary') }}</td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/exports/student-summary.xlsx">XLSX</a></td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/exports/student-summary.csv">CSV</a></td>
+          </tr>
+          <tr>
+            <td>{{ _('exports.table.per_question') }}</td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/exports/per-question.xlsx">XLSX</a></td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/exports/per-question.csv">CSV</a></td>
+          </tr>
+          <tr>
+            <td>{{ _('exports.table.question_analysis') }}</td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/exports/question-analysis.xlsx">XLSX</a></td>
+            <td><a class="table-action" href="/exams/{{ exam.id }}/exports/question-analysis.csv">CSV</a></td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

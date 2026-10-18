@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('exams.edit_header') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">{{ _('exams.' ~ exam.assessment_type) }}</p>
+      <h1>{{ _('exams.edit_header') }}</h1>
+    </div>
+  </section>
+
+  {% if errors %}
+    <div class="alert-error" role="alert">
+      {% for error in errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form class="form-panel" method="post" action="/exams/{{ exam.id }}/update">
+    <label>
+      {{ _('exams.name') }}
+      <input name="name" value="{{ exam.name }}" required>
+    </label>
+
+    <label>
+      {{ _('common.date') }}
+      <input name="exam_date" type="date" value="{{ exam.exam_date or '' }}">
+    </label>
+
+    <div class="form-actions">
+      <a class="button-secondary" href="/exams/{{ exam.id }}">{{ _('common.cancel') }}</a>
+      <button class="button-primary" type="submit">{{ _('common.save') }}</button>
+    </div>
+  </form>
+{% endblock %}

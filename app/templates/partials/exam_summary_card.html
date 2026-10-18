@@ -1,0 +1,74 @@
+{#
+  One session card for the /exams listing. Expects `exam` (a MockExam) and the
+  `next_exam_action` helper in context. Included from exams/index.html for both the main
+  result list and the same-month date fallback.
+#}
+{% set is_archived = exam.status == "archived" %}
+{% set action = next_exam_action(exam) %}
+{% set selectable = selectable|default(false) %}
+{% set bulk_form_id = bulk_form_id|default('') %}
+<div class="summary-card{% if selectable %} is-selectable{% endif %}">
+  <div class="summary-card-header">
+    {% if selectable %}
+      <label class="card-checkbox-inline" aria-label="{{ _('bulk.select_item') }}">
+        <input type="checkbox" name="selected_ids" value="{{ exam.id }}"
+               {% if bulk_form_id %}form="{{ bulk_form_id }}"{% endif %} data-card-checkbox>
+      </label>
+    {% endif %}
+    <div style="flex:1; min-width:0;">
+      <a class="summary-card-title" href="/exams/{{ exam.id }}">{{ exam.name }}</a>
+      <div style="display:flex; align-items:center; gap: var(--sp-2); margin-top: var(--sp-2); flex-wrap:wrap;">
+        {% if exam.assessment_type == "peer_review" %}
+          <span class="type-pill peer">{{ _('exams.peer_review') }}</span>
+        {% else %}
+          <span class="type-pill test">{{ _('exams.generic_test') }}</span>
+        {% endif %}
+        <span class="status-badge" data-status="{{ exam.status }}">
+          {{ _('exams.status.' ~ exam.status) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {% include "partials/session_compact_meta.html" %}
+
+  <div class="summary-card-footer">
+    <div class="summary-card-actions">
+      {% if is_archived %}
+        <a class="btn btn-secondary btn-sm" href="/exams/{{ exam.id }}">{{ _('common.view') }}</a>
+        <details class="more-menu">
+          <summary aria-label="{{ _('common.more_actions') }}">...</summary>
+          <div class="more-menu-popover">
+            {% if exam.results %}
+              <a href="/exams/{{ exam.id }}/results">{{ _('insights_overview.view_insights') }}</a>
+            {% endif %}
+            <a href="/exams/{{ exam.id }}/portable-export">{{ _('packages.export_session') }}</a>
+            <form method="post" action="/exams/{{ exam.id }}/delete"
+                  data-confirm="{{ _('exams.delete_confirm') }}">
+              <button class="is-danger" type="submit">{{ _('common.delete') }}</button>
+            </form>
+          </div>
+        </details>
+      {% else %}
+        <a class="btn btn-primary btn-sm" href="{{ action[1] }}">{{ action[0] }}</a>
+        <details class="more-menu">
+          <summary aria-label="{{ _('common.more_actions') }}">...</summary>
+          <div class="more-menu-popover">
+            <a href="/exams/{{ exam.id }}">{{ _('common.view') }}</a>
+            <a href="/exams/{{ exam.id }}/edit">{{ _('common.edit') }}</a>
+            <a href="/exams/{{ exam.id }}/exports">{{ _('exams.detail.exports') }}</a>
+            <a href="/exams/{{ exam.id }}/portable-export">{{ _('packages.export_session') }}</a>
+            <form method="post" action="/exams/{{ exam.id }}/archive"
+                  data-confirm="{{ _('exams.archive_confirm') }}">
+              <button type="submit">{{ _('exams.action.archive') }}</button>
+            </form>
+            <form method="post" action="/exams/{{ exam.id }}/delete"
+                  data-confirm="{{ _('exams.delete_confirm') }}">
+              <button class="is-danger" type="submit">{{ _('common.delete') }}</button>
+            </form>
+          </div>
+        </details>
+      {% endif %}
+    </div>
+  </div>
+</div>

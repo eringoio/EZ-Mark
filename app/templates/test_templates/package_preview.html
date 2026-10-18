@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('packages.preview_title') }} · EZ Mark{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow">EZ Mark</p>
+      <h1>{{ _('packages.preview_title') }}</h1>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-header"><h2>{{ _('packages.card_template') }}</h2></div>
+    <div class="detail-grid">
+      <div><dt>{{ _('packages.field_name') }}</dt><dd>{{ preview.name }}</dd></div>
+      <div><dt>{{ _('packages.field_type') }}</dt><dd>{{ _('exams.' ~ preview.assessment_type) }}</dd></div>
+      <div><dt>{{ _('packages.field_questions') }}</dt><dd>{{ preview.question_count }}</dd></div>
+      <div><dt>{{ _('packages.field_competencies') }}</dt><dd>{{ preview.competency_count }}</dd></div>
+      {% if preview.assessment_type == "peer_review" %}
+        <div><dt>{{ _('packages.field_rater_groups') }}</dt><dd>{{ preview.rater_group_count }}</dd></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="post" action="/templates/import-package/confirm">
+    <input type="hidden" name="token" value="{{ token }}">
+    <div class="form-actions">
+      <a class="button-secondary" href="/templates/import-package">{{ _('packages.preview_cancel') }}</a>
+      <button class="button-primary" type="submit">{{ _('packages.preview_confirm') }}</button>
+    </div>
+  </form>
+{% endblock %}

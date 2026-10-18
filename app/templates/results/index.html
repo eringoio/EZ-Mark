@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('nav.insights') }} · {{ exam.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="eyebrow"><a href="/exams/{{ exam.id }}" style="text-decoration:none;color:inherit;">{{ exam.name }}</a></p>
+      <h1>{{ _('nav.insights') }}</h1>
+      <p class="page-subtitle">
+        {% if exam.assessment_type == "peer_review" %}
+          {{ _('results.subtitle.peer_review') }}
+        {% else %}
+          {{ _('results.subtitle.generic_test') }}
+        {% endif %}
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/all.xlsx">{{ _('display_export.all') }}</a>
+      <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports">{{ _('exams.detail.exports') }}</a>
+      <form method="post" action="/exams/{{ exam.id }}/results/recalculate">
+        <button class="btn btn-primary" type="submit">{{ _('results.recalculate') }}</button>
+      </form>
+      <form method="post" action="/exams/{{ exam.id }}/results/pass-mark" class="pass-mark-form">
+        <select name="pass_mark_type" aria-label="{{ _('results.pass_mark_type') }}">
+          <option value="" {% if exam.pass_mark_type is none %}selected{% endif %}>{{ _('results.pass_mark_none') }}</option>
+          <option value="points" {% if exam.pass_mark_type == "points" %}selected{% endif %}>{{ _('results.pass_mark_points') }}</option>
+          <option value="percentage" {% if exam.pass_mark_type == "percentage" %}selected{% endif %}>{{ _('results.pass_mark_percentage') }}</option>
+        </select>
+        <input type="number" name="pass_mark_value" step="0.5" min="0" value="{{ exam.pass_mark_value if exam.pass_mark_value is not none }}" aria-label="{{ _('results.pass_mark_value') }}">
+        <button class="btn btn-secondary" type="submit">{{ _('results.pass_mark_save') }}</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Summary metrics -->
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-card-label">{{ _('exams.detail.students') }}</div>
+      <div class="metric-card-value">{{ summary.student_count }}</div>
+    </div>
+    {% if exam.assessment_type == "peer_review" %}
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('results.metric.class_average') }}</div>
+        <div class="metric-card-value">{{ "%.2f"|format(summary.average_total or 0) }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('results.metric.scored') }}</div>
+        <div class="metric-card-value">{{ summary.pass_count }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('results.metric.not_scored') }}</div>
+        <div class="metric-card-value">{{ summary.fail_count }}</div>
+      </div>
+    {% else %}
+      {% if exam.pass_mark_value is not none %}
+        <div class="metric-card">
+          <div class="metric-card-label">{{ _('results.metric.passed') }}</div>
+          <div class="metric-card-value" style="color: var(--clr-success);">{{ summary.pass_count }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-label">{{ _('results.metric.failed') }}</div>
+          <div class="metric-card-value" style="color: var(--clr-danger);">{{ summary.fail_count }}</div>
+        </div>
+      {% else %}
+        <div class="metric-card">
+          <div class="metric-card-label">{{ _('results.metric.scored') }}</div>
+          <div class="metric-card-value">{{ results|length - summary.incomplete_count - summary.not_scored_count }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-label">{{ _('results.metric.incomplete') }}</div>
+          <div class="metric-card-value">{{ summary.incomplete_count + summary.not_scored_count }}</div>
+        </div>
+      {% endif %}
+      <div class="metric-card">
+        <div class="metric-card-label">{{ _('results.metric.average_score') }}</div>
+        <div class="metric-card-value">{{ "%.1f"|format(summary.average_total or 0) }}</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Student ranking -->
+  <div class="panel" style="margin-bottom: var(--sp-5);">
+    <div class="panel-header">
+      <h2>{{ _('exams.detail.students') }}</h2>
+    </div>
+    {% if results %}
+      <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/ranking.xlsx">{{ _('display_export.button') }}</a>
+      <table class="data-table" data-export-key="ranking" data-export-title="{{ _('exams.detail.students') }}">
+        <thead>
+          <tr>
+            {% if exam.assessment_type != "peer_review" %}
+              <th style="width:40px;" data-export-number="0">#</th>
+            {% endif %}
+            <th>{{ _('students.table.student_number') }}</th>
+            <th>{{ _('students.table.name') }}</th>
+            <th>{{ _('students.table.class') }}</th>
+
+            {% if exam.assessment_type == "peer_review" %}
+              <th data-export-number="General">{{ _('results.table.average_score') }}</th>
+              <th data-export-number="General">{{ _('results.table.ratings_received') }}</th>
+              <th>{{ _('results.table.competency_averages') }}</th>
+            {% else %}
+              <th data-export-number="General">{{ _('results.table.raw_score') }}</th>
+              <th data-export-number="0.0%">{{ _('results.table.percentage') }}</th>
+              {% if exam.pass_mark_value is not none %}
+                <th>{{ _('results.table.status') }}</th>
+              {% endif %}
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for result in results %}
+            <tr>
+              {% if exam.assessment_type != "peer_review" %}
+                <td class="muted text-sm">{{ loop.index }}</td>
+              {% endif %}
+              <td class="text-sm muted">{{ result.student.student_number }}</td>
+              <td><strong>{{ result.student.name }}</strong></td>
+              <td class="text-sm muted">{{ result.student.group_for_exam(exam.id) or "—" }}</td>
+
+              {% if exam.assessment_type == "peer_review" %}
+                <td>
+                  {% if result.final_average_score is not none %}
+                    <strong>{{ "%.2f"|format(result.final_average_score) }}</strong>
+                  {% else %}
+                    <span class="muted">{{ _('results.table.not_scored') }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ result.received_score_count }}</td>
+                <td>
+                  {% if result.competency_breakdown_json %}
+                    <div style="display:flex; flex-direction:column; gap:2px; font-size:12px;">
+                      {% for comp_id, comp in result.competency_breakdown_json.items() %}
+                        <span>
+                          {{ comp.name }}:
+                          <strong>{{ comp.average if comp.average is not none else "—" }}</strong>
+                          <span class="muted">({{ comp.count }} {{ _('results.table.ratings') }})</span>
+                        </span>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+
+              {% else %}
+                <td>
+                  {% if result.total_score is not none %}
+                    <strong>{{ result.total_score|score_text }}</strong> / {{ result.score_details_json.get("max_points")|score_text }}
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if result.score_details_json.get("percentage") is not none %}
+                    {{ result.score_details_json.get("percentage") }}%
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                {% if exam.pass_mark_value is not none %}
+                  <td>
+                    {% if result.pass_fail_status %}
+                      <span class="status-badge {{ result.pass_fail_status }}">
+                        {{ _('results.status.' ~ result.pass_fail_status) }}
+                      </span>
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                {% endif %}
+              {% endif %}
+
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty-state" style="padding: var(--sp-10) var(--sp-8);">
+        <h3>{{ _('results.empty') }}</h3>
+        <p>{{ _('results.empty_desc') }}</p>
+        <form method="post" action="/exams/{{ exam.id }}/results/recalculate">
+          <button class="btn btn-primary" type="submit">{{ _('results.recalculate') }}</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Question analysis (non-peer-review) -->
+  {% if exam.assessment_type != "peer_review" %}
+    <div class="panel" style="margin-bottom: var(--sp-5);">
+      <div class="panel-header">
+        <h2>{{ _('results.priority.header') }}</h2>
+      </div>
+      {% if feedback_priority_rows %}
+        <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/priorities.xlsx">{{ _('display_export.button') }}</a>
+      <table class="data-table" data-export-key="priorities" data-export-title="{{ _('results.priority.header') }}">
+          <thead>
+            <tr>
+              <th>{{ _('results.priority.priority') }}</th>
+              <th>{{ _('results.priority.question') }}</th>
+              <th data-export-number="0%">{{ _('results.table.correct_percent') }}</th>
+              <th>{{ _('results.priority.students_needing_review') }}</th>
+              <th data-export-number="General">{{ _('results.table.blank') }}</th>
+              <th data-export-number="General">{{ _('results.table.multiple') }}</th>
+              <th>{{ _('results.priority.reason_label') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in feedback_priority_rows %}
+              {% set correct_pct = (row.correct_rate * 100) if row.correct_rate is not none else none %}
+              <tr>
+                <td>
+                  <span class="status-badge {{ row.priority_band }}">
+                    {{ _('results.priority.band.' ~ row.priority_band) }}
+                  </span>
+                </td>
+                <td>
+                  <strong>{{ row.sheet.sheet_name if row.sheet else "—" }}</strong>
+                  <span class="muted text-sm">
+                    / {{ row.group_label or "—" }} / {{ row.q_label }}
+                  </span>
+                </td>
+                <td>
+                  {% if correct_pct is not none %}
+                    <strong>{{ "%.0f"|format(correct_pct) }}%</strong>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                <td>{{ row.incorrect_count }} / {{ row.student_count }}</td>
+                <td>{{ row.blank_count }}</td>
+                <td>{{ row.multiple_mark_count }}</td>
+                <td>{{ _('results.priority.reason.' ~ row.priority_reason_key) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state" style="padding: var(--sp-8);">
+          <h3>{{ _('results.priority.empty') }}</h3>
+          <p>{{ _('results.priority.empty_desc') }}</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>{{ _('results.question_analysis_header') }}</h2>
+      </div>
+      {% if analysis_sheets %}
+        {% for sheet_block in analysis_sheets %}
+          <div class="panel-header" style="border-top: 1px solid var(--clr-border);">
+            <h2 style="font-size:15px;">
+              {{ sheet_block.sheet.sheet_name if sheet_block.sheet else "—" }}
+            </h2>
+          </div>
+          <a class="btn btn-secondary" href="/exams/{{ exam.id }}/exports/display/question-{{ loop.index }}.xlsx">{{ _('display_export.button') }}</a>
+      <table class="data-table" data-export-key="question-{{ loop.index }}" data-export-title="{{ sheet_block.sheet.sheet_name if sheet_block.sheet else _('results.question_analysis_header') }}">
+            <thead>
+              <tr>
+                <th>{{ _('review.table.question') }}</th>
+                <th>{{ _('results.table.correct_answer') }}</th>
+                <th data-export-number="0">{{ _('exams.detail.students') }}</th>
+                <th data-export-number="0%">{{ _('results.table.correct_percent') }}</th>
+                <th style="min-width:100px;"></th>
+                <th data-export-number="General">{{ _('results.table.blank') }}</th>
+                <th data-export-number="General">{{ _('results.table.multiple') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for group in sheet_block.groups %}
+                {% if group.label %}
+                  <tr class="review-queue-group-header">
+                    <td colspan="7">{{ group.label }}</td>
+                  </tr>
+                {% endif %}
+                {% for row in group.rows %}
+                  {% set correct_pct = (row.correct_rate * 100) if row.correct_rate is not none else 0 %}
+                  <tr>
+                    <td><strong>{{ row.q_label }}</strong></td>
+                    <td>{{ row.question.correct_answer or "—" }}</td>
+                    <td>{{ row.student_count }}</td>
+                    <td>
+                      {% if row.correct_rate is not none %}
+                        <strong>{{ "%.0f"|format(correct_pct) }}%</strong>
+                      {% else %}
+                        <span class="muted">—</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div style="display:flex; align-items:center; gap: var(--sp-2);">
+                        <div class="insight-bar">
+                          <div class="insight-bar-fill {% if correct_pct >= 70 %}good{% elif correct_pct >= 40 %}warn{% else %}danger{% endif %}"
+                               style="width: {{ correct_pct }}%"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-sm muted">{{ row.blank_count }}</td>
+                    <td class="text-sm muted">{{ row.multiple_mark_count }}</td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="padding: var(--sp-8);">
+          <h3>{{ _('results.empty_analysis') }}</h3>
+          <p>{{ _('results.empty_analysis_desc') }}</p>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% endblock %}

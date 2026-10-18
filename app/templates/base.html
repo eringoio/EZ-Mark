@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="{{ current_locale }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}EZ Mark{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/index.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+    <script src="{{ url_for('static', path='/js/app.js') }}" defer></script>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <div class="app-shell">
+
+      <!-- ── Sidebar ── -->
+      <nav class="sidebar" aria-label="{{ _('nav.main') }}">
+
+        <!-- Logo -->
+        <a class="sidebar-logo" href="/">
+          <div class="sidebar-logo-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <span class="sidebar-logo-text">EZ Mark</span>
+        </a>
+
+        <!-- Nav links -->
+        <div class="sidebar-nav">
+
+          <!-- Templates -->
+          <a class="nav-link {% if active_nav == 'templates' %}is-active{% endif %}" href="/templates">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M3 9h18M9 21V9"/>
+              </svg>
+            </span>
+            {{ _('nav.templates') }}
+          </a>
+
+          <!-- Sessions -->
+          <a class="nav-link {% if active_nav == 'sessions' %}is-active{% endif %}" href="/exams">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </span>
+            {{ _('nav.sessions') }}
+          </a>
+
+          <!-- Scan & Review -->
+          <a class="nav-link {% if active_nav == 'scan_review' %}is-active{% endif %}" href="/scan-review">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 16 12 12 8 16"/>
+                <line x1="12" y1="12" x2="12" y2="21"/>
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+              </svg>
+            </span>
+            {{ _('nav.scan_review') }}
+            {% if review_count is defined and review_count > 0 %}
+              <span class="nav-badge">{{ review_count }}</span>
+            {% endif %}
+          </a>
+
+          <!-- Insights -->
+          <a class="nav-link {% if active_nav == 'insights' %}is-active{% endif %}" href="/insights">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6"  y1="20" x2="6"  y2="14"/>
+              </svg>
+            </span>
+            {{ _('nav.insights') }}
+          </a>
+
+        </div>
+
+        <!-- Footer: language + settings + environment -->
+        <div class="sidebar-footer">
+          <div class="sidebar-footer-top">
+            <div class="lang-switcher">
+              <a href="/lang/en" class="{% if current_locale == 'en' %}is-active{% endif %}">EN</a>
+              <a href="/lang/ja" class="{% if current_locale == 'ja' %}is-active{% endif %}">日本語</a>
+            </div>
+            <a class="settings-cog {% if active_nav == 'settings' %}is-active{% endif %}"
+               href="/settings/omr"
+               aria-label="{{ _('settings.nav_label') }}"
+               title="{{ _('settings.nav_label') }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+              </svg>
+            </a>
+          </div>
+          <div class="environment-label">{% if demo_mode %}{{ _('demo.status') }}{% else %}Local{% endif %}</div>
+        </div>
+
+      </nav>
+      <!-- /Sidebar -->
+
+      <!-- ── Main content ── -->
+      <main class="main-content" id="main-content">
+        <div class="content-body">
+          {% if demo_mode %}
+            <div class="demo-banner" role="note">
+              <strong>{{ _('demo.status') }}</strong>
+              <span>{{ _('demo.banner') }}</span>
+            </div>
+          {% endif %}
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+    <!-- ── Mobile bottom navigation ── -->
+    <nav class="bottom-nav" aria-label="{{ _('nav.main') }}">
+
+      <a class="bottom-nav-link {% if active_nav == 'templates' %}is-active{% endif %}" href="/templates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <span>{{ _('nav.templates') }}</span>
+      </a>
+
+      <a class="bottom-nav-link {% if active_nav == 'sessions' %}is-active{% endif %}" href="/exams">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>{{ _('nav.sessions') }}</span>
+      </a>
+
+      <a class="bottom-nav-link {% if active_nav == 'scan_review' %}is-active{% endif %}" href="/scan-review">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="16 16 12 12 8 16"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+        {% if review_count is defined and review_count > 0 %}
+          <span class="bottom-nav-badge">{{ review_count }}</span>
+        {% endif %}
+        <span>{{ _('nav.scan_review') }}</span>
+      </a>
+
+      <a class="bottom-nav-link {% if active_nav == 'insights' %}is-active{% endif %}" href="/insights">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6"  y1="20" x2="6"  y2="14"/>
+        </svg>
+        <span>{{ _('nav.insights') }}</span>
+      </a>
+
+    </nav>
+    <!-- /Mobile bottom navigation -->
+
+  </body>
+</html>

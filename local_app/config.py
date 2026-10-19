@@ -130,7 +130,11 @@ def get_user_local_dir() -> Path:
 def get_config() -> LauncherConfig:
     root_dir = get_default_root_dir()
     server_exe_override = os.getenv("EZMARK_SERVER_EXE")
-    server_exe = Path(server_exe_override) if server_exe_override else root_dir / "server" / "ezmark-server.exe"
+    server_exe = (
+        Path(server_exe_override)
+        if server_exe_override
+        else root_dir / "server" / "ezmark-server.exe"
+    )
     chrome_exe = os.getenv("EZMARK_CHROME_EXE")
     return LauncherConfig(
         app_name=APP_NAME,

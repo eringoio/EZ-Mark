@@ -89,8 +89,12 @@ def test_manual_blank_leaves_queue() -> None:
         assert len(problems) == 2
 
         apply_rating_correction(
-            session, problems[0], score=None, status="blank",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=None,
+            status="blank",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         rating = session.get(PeerReviewRating, problems[0].id)
         assert rating.status == "reviewed_blank"
@@ -104,8 +108,12 @@ def test_manual_invalid_leaves_queue() -> None:
         problems = list_problem_ratings(session, form)
 
         apply_rating_correction(
-            session, problems[0], score=None, status="invalid",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=None,
+            status="invalid",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         rating = session.get(PeerReviewRating, problems[0].id)
         assert rating.status == "reviewed_invalid"
@@ -119,8 +127,12 @@ def test_manual_score_correction_leaves_queue() -> None:
         problems = list_problem_ratings(session, form)
 
         apply_rating_correction(
-            session, problems[0], score=4, status="reviewed",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=4,
+            status="reviewed",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         rating = session.get(PeerReviewRating, problems[0].id)
         assert rating.status == "reviewed"
@@ -133,8 +145,12 @@ def test_final_correction_makes_queue_zero() -> None:
         exam, students, form, comp_id = _seed_two_problem_ratings(session)
         for rating in list_problem_ratings(session, form):
             apply_rating_correction(
-                session, rating, score=3, status="reviewed",
-                score_min=form.score_min, score_max=form.score_max,
+                session,
+                rating,
+                score=3,
+                status="reviewed",
+                score_min=form.score_min,
+                score_max=form.score_max,
             )
         assert build_review_context(session, form)["problem_count"] == 0
 
@@ -145,12 +161,20 @@ def test_scoring_ignores_reviewed_blank_and_invalid() -> None:
         problems = list_problem_ratings(session, form)
         # One scored, one confirmed blank (non-scoring).
         apply_rating_correction(
-            session, problems[0], score=5, status="reviewed",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=5,
+            status="reviewed",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         apply_rating_correction(
-            session, problems[1], score=None, status="blank",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[1],
+            score=None,
+            status="blank",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         recalculate_anonymous_peer_review_results(session, form)
         from app.models import PeerReviewGroupResult
@@ -189,8 +213,12 @@ def test_refresh_status_ready_to_score_needs_review_results() -> None:
 
         for rating in list_problem_ratings(session, form):
             apply_rating_correction(
-                session, rating, score=3, status="reviewed",
-                score_min=form.score_min, score_max=form.score_max,
+                session,
+                rating,
+                score=3,
+                status="reviewed",
+                score_min=form.score_min,
+                score_max=form.score_max,
             )
         # All resolved, no results yet -> ready_to_score.
         assert refresh_peer_review_exam_status(session, exam, form) == "ready_to_score"
@@ -198,8 +226,10 @@ def test_refresh_status_ready_to_score_needs_review_results() -> None:
         recalculate_anonymous_peer_review_results(session, form)
         session.add(
             PeerReviewFinalResult(
-                exam_id=exam.id, form_id=form.id,
-                target_student_id=students[0].id, final_score=3.0,
+                exam_id=exam.id,
+                form_id=form.id,
+                target_student_id=students[0].id,
+                final_score=3.0,
             )
         )
         session.commit()
@@ -263,13 +293,13 @@ def test_target_labels_relabel_on_sync_without_moving_bubbles() -> None:
         for t in targets:
             assert t.student.student_number not in t.display_label
         # Page rows refreshed too.
-        page_labels = {
-            row["display_label"] for p in form.pages for row in p.target_rows_json
-        }
+        page_labels = {row["display_label"] for p in form.pages for row in p.target_rows_json}
         assert "stale-code-label" not in page_labels
         assert page_labels == {"1. Yamada Taro", "2. Tanaka Hanako"}
         # Bubble coordinate map positions are unchanged.
-        assert session.get(type(page), page.id).coordinate_map_json["rating_bubbles"] == bubbles_before
+        assert (
+            session.get(type(page), page.id).coordinate_map_json["rating_bubbles"] == bubbles_before
+        )
 
 
 def test_scan_review_visibility_with_ratings_no_batch_counter() -> None:

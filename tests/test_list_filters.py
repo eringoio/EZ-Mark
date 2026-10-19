@@ -55,9 +55,7 @@ def test_partial_search_is_case_insensitive() -> None:
 def test_date_range_uses_exam_date_for_sessions() -> None:
     march = _exam("March", created="2026-01-01", exam_date="2026-03-15")
     june = _exam("June", created="2026-01-01", exam_date="2026-06-15")
-    result = apply_filters(
-        [march, june], ListFilters(date_from="2026-03-01", date_to="2026-03-31")
-    )
+    result = apply_filters([march, june], ListFilters(date_from="2026-03-01", date_to="2026-03-31"))
     assert [e.name for e in result] == ["March"]
 
 
@@ -94,12 +92,12 @@ def test_month_fallback_widens_to_month_respecting_type_and_archived() -> None:
     same_month = _exam("SameMonth", created="2026-01-01", exam_date="2026-03-20")
     other_month = _exam("OtherMonth", created="2026-01-01", exam_date="2026-04-20")
     wrong_type = _exam(
-        "WrongType", created="2026-01-01", exam_date="2026-03-05",
+        "WrongType",
+        created="2026-01-01",
+        exam_date="2026-03-05",
         assessment_type="peer_review",
     )
-    archived = _exam(
-        "Archived", created="2026-01-01", exam_date="2026-03-05", status="archived"
-    )
+    archived = _exam("Archived", created="2026-01-01", exam_date="2026-03-05", status="archived")
     pool = [same_month, other_month, wrong_type, archived]
     filters = ListFilters(date="2026-03-15", assessment_type="generic_test")
     # No session sat on the 15th, so the exact list is empty...
@@ -136,8 +134,13 @@ def test_archived_uses_template_status_for_templates() -> None:
 
 def test_parse_list_filters_normalises_bad_values() -> None:
     filters = parse_list_filters(
-        {"type": "bogus", "sort": "weird", "archived": "maybe", "search": "  hi  ",
-         "date_from": "not-a-date"}
+        {
+            "type": "bogus",
+            "sort": "weird",
+            "archived": "maybe",
+            "search": "  hi  ",
+            "date_from": "not-a-date",
+        }
     )
     assert filters.assessment_type == "all"
     assert filters.sort == "newest"

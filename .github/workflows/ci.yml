@@ -5,9 +5,16 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,5 +27,9 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
       - name: Lint
         run: python -m ruff check .
+      - name: Check formatting
+        run: python -m ruff format --check .
+      - name: Compile
+        run: python -m compileall -q app local_app scripts tests
       - name: Test
         run: python -m pytest -p no:cacheprovider -q

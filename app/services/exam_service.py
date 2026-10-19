@@ -35,6 +35,7 @@ ARCHIVED_SESSION_ERROR = (
     "exported, or deleted."
 )
 
+
 @dataclass(frozen=True)
 class ExamCreateInput:
     name: str
@@ -197,17 +198,34 @@ def next_exam_action(exam: MockExam) -> tuple[str, str]:
         if exam.status == "draft":
             if not exam.students:
                 return (_("exams.action.add_students"), f"/exams/{exam.id}/students")
-            return (_("exams.action.configure_competencies"), f"/exams/{exam.id}/peer-review/builder")
+            return (
+                _("exams.action.configure_competencies"),
+                f"/exams/{exam.id}/peer-review/builder",
+            )
         actions = {
-            "ready_to_print": (_("exams.action.generate_sheets"), f"/exams/{exam.id}/peer-review/builder"),
-            "printed": (_("exams.action.upload_scans"), f"/exams/{exam.id}/peer-review/scan-batches"),
-            "scanning": (_("exams.action.view_scan_progress"), f"/exams/{exam.id}/peer-review/scan-batches"),
+            "ready_to_print": (
+                _("exams.action.generate_sheets"),
+                f"/exams/{exam.id}/peer-review/builder",
+            ),
+            "printed": (
+                _("exams.action.upload_scans"),
+                f"/exams/{exam.id}/peer-review/scan-batches",
+            ),
+            "scanning": (
+                _("exams.action.view_scan_progress"),
+                f"/exams/{exam.id}/peer-review/scan-batches",
+            ),
             "ready_to_score": (_("exams.action.calculate_results"), f"/exams/{exam.id}/results"),
-            "needs_review": (_("exams.action.review_problems"), f"/exams/{exam.id}/peer-review/review"),
+            "needs_review": (
+                _("exams.action.review_problems"),
+                f"/exams/{exam.id}/peer-review/review",
+            ),
             "results_ready": (_("exams.action.view_results"), f"/exams/{exam.id}/results"),
             "locked": (_("exams.action.export"), f"/exams/{exam.id}/exports"),
         }
-        return actions.get(exam.status, (_("exams.action.open"), f"/exams/{exam.id}/peer-review/builder"))
+        return actions.get(
+            exam.status, (_("exams.action.open"), f"/exams/{exam.id}/peer-review/builder")
+        )
     if exam.status == "draft":
         if not exam.students:
             return (_("exams.action.add_students"), f"/exams/{exam.id}/students")

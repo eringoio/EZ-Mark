@@ -112,9 +112,7 @@ def test_move_competency_bad_direction_is_rejected() -> None:
         template_id = _peer_template(client)
         base = f"/templates/{template_id}/peer-review"
         first_id = client.get(f"{base}/builder/state").json()["competencies"][0]["id"]
-        resp = client.post(
-            f"{base}/competencies/{first_id}/move", data={"direction": "sideways"}
-        )
+        resp = client.post(f"{base}/competencies/{first_id}/move", data={"direction": "sideways"})
         assert resp.status_code == 400
 
 

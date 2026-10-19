@@ -20,7 +20,11 @@ def recalculate_anonymous_peer_review_results(
     db.execute(delete(PeerReviewGroupResult).where(PeerReviewGroupResult.form_id == form.id))
     db.execute(delete(PeerReviewFinalResult).where(PeerReviewFinalResult.form_id == form.id))
     competencies = list(
-        db.scalars(select(Competency).where(Competency.exam_id == form.exam_id).order_by(Competency.display_order))
+        db.scalars(
+            select(Competency)
+            .where(Competency.exam_id == form.exam_id)
+            .order_by(Competency.display_order)
+        )
     )
     finals = []
     for target in [target for target in form.targets if target.active]:
@@ -46,7 +50,11 @@ def recalculate_anonymous_peer_review_results(
                     if rating.competency_id == comp.id and rating.final_score is not None
                 ]
                 avg = sum(scores) / len(scores) if scores else None
-                comp_breakdown[str(comp.id)] = {"name": comp.name, "average": avg, "count": len(scores)}
+                comp_breakdown[str(comp.id)] = {
+                    "name": comp.name,
+                    "average": avg,
+                    "count": len(scores),
+                }
                 if avg is not None:
                     comp_avgs.append(avg)
                     count += len(scores)
@@ -92,7 +100,9 @@ def recalculate_anonymous_peer_review_results(
 
 def _weighted_score(form: PeerReviewForm, group_breakdown: dict) -> float | None:
     available = [
-        group for group in group_breakdown.values() if group["average"] is not None and group["weight_percent"] > 0
+        group
+        for group in group_breakdown.values()
+        if group["average"] is not None and group["weight_percent"] > 0
     ]
     weighted_groups = [group for group in group_breakdown.values() if group["weight_percent"] > 0]
     if form.missing_group_policy == "require_all" and len(available) != len(weighted_groups):

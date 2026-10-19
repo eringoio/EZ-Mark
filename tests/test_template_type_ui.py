@@ -41,4 +41,4 @@ def test_template_creation_route_routes_peer_to_builder() -> None:
 
     # Peer-review templates are created and routed to their own WYSIWYG builder.
     assert 'if template.assessment_type == "peer_review":' in route_source
-    assert '/templates/{template.id}/peer-review' in route_source
+    assert "/templates/{template.id}/peer-review" in route_source

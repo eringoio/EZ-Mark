@@ -36,9 +36,7 @@ def _add_manual(client: TestClient, run_id: int, rows: list[tuple[str, str, str]
         "name": [nm for _sn, nm, _cn in rows],
         "class_name": [cn for _sn, _nm, cn in rows],
     }
-    return client.post(
-        f"/exams/{run_id}/students/add-manual", data=data, follow_redirects=False
-    )
+    return client.post(f"/exams/{run_id}/students/add-manual", data=data, follow_redirects=False)
 
 
 def _included_count(run_id: int) -> int:
@@ -136,9 +134,7 @@ def test_peer_review_roster_sync_after_manual_add() -> None:
             follow_redirects=False,
         )
         run_id = int(run.headers["location"].split("/")[2])
-        assert _add_manual(
-            client, run_id, [("MANUAL-PR-SYN1", "Yamada", "3A")]
-        ).status_code == 303
+        assert _add_manual(client, run_id, [("MANUAL-PR-SYN1", "Yamada", "3A")]).status_code == 303
 
         db = SessionLocal()
         try:
@@ -146,9 +142,7 @@ def test_peer_review_roster_sync_after_manual_add() -> None:
             from app.models import PeerReviewForm
 
             form = db.query(PeerReviewForm).filter(PeerReviewForm.exam_id == run_exam.id).first()
-            targets = (
-                db.query(PeerReviewTarget).filter(PeerReviewTarget.form_id == form.id).all()
-            )
+            targets = db.query(PeerReviewTarget).filter(PeerReviewTarget.form_id == form.id).all()
             assert len(targets) == 1
         finally:
             db.close()

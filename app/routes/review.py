@@ -96,7 +96,9 @@ def review_queue(
         )
         queue_groups = _build_queue_groups(exam, responses)
         prev_response_id, next_response_id = _prev_next_response_ids(responses, current)
-        stale_pages = _needs_review_pages_without_reviewable_responses(db, exam_id) if not responses else []
+        stale_pages = (
+            _needs_review_pages_without_reviewable_responses(db, exam_id) if not responses else []
+        )
         orphan_review_items = orphan_review_problem_rows(db, exam_id) if not responses else []
         display_page = current.scanned_page if current and current.scanned_page else None
         bulk_page_remaining_count = (
@@ -162,16 +164,16 @@ def review_exam_debug(exam_id: int, request: Request, db: Session = Depends(get_
     if exam is None:
         raise HTTPException(status_code=404)
     pages = list(
-        db.scalars(
-            select(ScannedPage).join(ScanBatch).where(ScanBatch.exam_id == exam_id)
-        ).unique()
+        db.scalars(select(ScannedPage).join(ScanBatch).where(ScanBatch.exam_id == exam_id)).unique()
     )
     pages_by_review_status: dict[str, int] = {}
     aggregate_counts = _empty_response_status_counts()
     needs_review_pages = []
     orphan_rows = _orphan_response_debug_rows(db, exam_id)
     for page in pages:
-        pages_by_review_status[page.review_status] = pages_by_review_status.get(page.review_status, 0) + 1
+        pages_by_review_status[page.review_status] = (
+            pages_by_review_status.get(page.review_status, 0) + 1
+        )
         counts = _response_status_counts(page.responses)
         for status, count in counts.items():
             aggregate_counts[status] = aggregate_counts.get(status, 0) + count
@@ -486,7 +488,9 @@ def _build_queue_groups(exam: MockExam, responses: list) -> list[dict]:
             if sheet_instance and sheet_instance.physical_sheet
             else "—",
         ]
-        group_label = question_group_label(response.question, group_titles) if response.question else ""
+        group_label = (
+            question_group_label(response.question, group_titles) if response.question else ""
+        )
         if group_label:
             header_parts.append(group_label)
         header = " · ".join(header_parts)
@@ -509,7 +513,9 @@ def _prev_next_response_ids(responses: list, current) -> tuple[int | None, int |
     return ids[index - 1], ids[(index + 1) % len(ids)]
 
 
-def _needs_review_pages_without_reviewable_responses(db: Session, exam_id: int) -> list[ScannedPage]:
+def _needs_review_pages_without_reviewable_responses(
+    db: Session, exam_id: int
+) -> list[ScannedPage]:
     pages = list(
         db.scalars(
             select(ScannedPage)
@@ -547,8 +553,7 @@ def _scan_debug_enabled() -> bool:
 
 def _empty_response_status_counts() -> dict:
     return {
-        status: 0
-        for status in ["ok", "blank", "multiple_mark", "unclear", "invalid", "reviewed"]
+        status: 0 for status in ["ok", "blank", "multiple_mark", "unclear", "invalid", "reviewed"]
     }
 
 
@@ -721,5 +726,3 @@ def mark_remaining_page_invalid_route(
     resolve_remaining_page_responses(db, scanned_page_id, "invalid")
     maybe_finalize_exam(db, exam)
     return RedirectResponse(f"/exams/{exam.id}/review", status_code=303)
-
-

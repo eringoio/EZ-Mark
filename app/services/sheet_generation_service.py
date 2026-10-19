@@ -210,7 +210,9 @@ def generate_exam_sheets(db: Session, exam: MockExam) -> GeneratedSheetSummary:
 
     active_sheets = _active_physical_sheets(exam)
     if not active_sheets:
-        raise ValueError("No physical sheets contain questions. Add questions before generating sheets.")
+        raise ValueError(
+            "No physical sheets contain questions. Add questions before generating sheets."
+        )
 
     templates_by_sheet = _create_templates(db, exam, active_sheets)
     generated_pdf_paths: list[str] = []
@@ -283,7 +285,9 @@ def generate_blank_sheets(db: Session, exam: MockExam, copies: int = 1) -> str:
 
     active_sheets = _active_physical_sheets(exam)
     if not active_sheets:
-        raise ValueError("No physical sheets contain questions. Add questions before generating sheets.")
+        raise ValueError(
+            "No physical sheets contain questions. Add questions before generating sheets."
+        )
 
     # Blank sheets must use the exact coordinate maps the student sheets use,
     # so they only ever reference existing latest templates. Templates are
@@ -297,7 +301,9 @@ def generate_blank_sheets(db: Session, exam: MockExam, copies: int = 1) -> str:
     elif not exam.sheet_instances:
         templates_by_sheet = _create_templates(db, exam, active_sheets)
     else:
-        raise ValueError("Regenerate the student mark sheets first so blank sheets match their layout.")
+        raise ValueError(
+            "Regenerate the student mark sheets first so blank sheets match their layout."
+        )
 
     pdf_path = output_dir / _blank_pdf_filename(exam)
     relative_path = data_relative_path(pdf_path)
@@ -436,7 +442,9 @@ def calculate_sheet_layout(
     bottom_safe = 194
     column_gap = 3
     column_count = 5 if len(ordered_questions) >= 55 else 4 if len(ordered_questions) >= 30 else 3
-    column_width = (LANDSCAPE_A4_WIDTH_MM - left_margin - 12 - (column_count - 1) * column_gap) / column_count
+    column_width = (
+        LANDSCAPE_A4_WIDTH_MM - left_margin - 12 - (column_count - 1) * column_gap
+    ) / column_count
     max_rows_per_block = max(1, int((bottom_safe - top_y - 4) // row_gap))
     column_x = [left_margin + index * (column_width + column_gap) for index in range(column_count)]
 
@@ -696,7 +704,10 @@ def _draw_sheet_page(
     name_text = printed_name
     max_name_width = _mm(82)
     if canvas.stringWidth(name_text, font_regular, 10) > max_name_width:
-        while len(name_text) > 2 and canvas.stringWidth(name_text + "...", font_regular, 10) > max_name_width:
+        while (
+            len(name_text) > 2
+            and canvas.stringWidth(name_text + "...", font_regular, 10) > max_name_width
+        ):
             name_text = name_text[:-1]
         name_text = f"{name_text}..."
     canvas.drawString(_mm(82), metadata_y, name_text)
@@ -752,7 +763,9 @@ def _draw_bubbles(canvas: Canvas, coordinate_map: dict, font_name: str = "Helvet
     settings = get_effective_omr_settings()
     page_height_mm = coordinate_map.get("page_height_mm", A4_HEIGHT_MM)
     page_height = _mm(page_height_mm)
-    questions_by_id = {question["question_id"]: question for question in coordinate_map["questions"]}
+    questions_by_id = {
+        question["question_id"]: question for question in coordinate_map["questions"]
+    }
     _draw_question_group_tables(
         canvas, coordinate_map, questions_by_id, font_name, page_height, settings.grid_line_gray
     )
@@ -944,8 +957,7 @@ def latest_exam_download_path(db: Session, exam: MockExam) -> str | None:
             if sheet_instance.pdf_file_path
             and (
                 not latest_template_ids
-                or sheet_instance.sheet_template_id
-                in latest_template_ids.values()
+                or sheet_instance.sheet_template_id in latest_template_ids.values()
             )
         }
     )

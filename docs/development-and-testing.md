@@ -42,7 +42,7 @@ This seeds a synthetic 20-question quiz plus a peer evaluation example into `dat
 python -m pytest
 ```
 
-- Full suite is currently 470+ tests and should pass 100%.
+- Run the full suite before submitting changes. Review all failures and skips.
 - Coverage gaps: no scan images are shipped; scan-processing tests synthesize pages rather than scanning real prints.
 - Use dedicated temp data roots (pytest tmp paths), never the repo `data/` root, when a test needs files.
 
@@ -54,6 +54,10 @@ python -m ruff format --check .
 ```
 
 (Ruff config lives in `pyproject.toml`; line length 100, double quotes, LF endings.)
+
+GitHub Actions runs lint, format, compile, and pytest checks on Ubuntu and Windows with Python 3.13.
+Tests use synthetic fixtures and temporary data directories. CI does not deploy the app.
+These checks do not replace manual Windows package validation.
 
 ## Test conventions
 

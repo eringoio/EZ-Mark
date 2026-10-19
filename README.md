@@ -164,9 +164,10 @@ An honest, current list — see [docs/limitations.md](docs/limitations.md). High
 ```bash
 venv\Scripts\python.exe -m pytest
 venv\Scripts\python.exe -m ruff check .
+venv\Scripts\python.exe -m ruff format --check .
 ```
 
-The test suite (470+ tests) covers templates, scoring, review, peer evaluation, imports/exports, demo mode, packaging helpers, and localization. See [docs/development-and-testing.md](docs/development-and-testing.md).
+The test suite covers templates, scoring, review, peer evaluation, imports/exports, demo mode, packaging helpers, and localization. See [docs/development-and-testing.md](docs/development-and-testing.md).
 
 ## License
 

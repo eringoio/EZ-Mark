@@ -77,7 +77,12 @@ def generate_questions(
         return templates.TemplateResponse(
             request,
             "answer_keys/question_structure.html",
-            {"request": request, "active_nav": _active_nav(exam), "exam": exam, "errors": [str(exc)]},
+            {
+                "request": request,
+                "active_nav": _active_nav(exam),
+                "exam": exam,
+                "errors": [str(exc)],
+            },
             status_code=400,
         )
     return RedirectResponse(f"/exams/{exam_id}/answer-key", status_code=303)
@@ -183,11 +188,7 @@ def _problem_group_counts_by_sheet(exam) -> dict[int, str]:
     result: dict[int, str] = {}
     for sheet in exam.physical_sheets:
         groups = sorted(
-            [
-                group
-                for group in exam.problem_groups
-                if group.physical_sheet_id == sheet.id
-            ],
+            [group for group in exam.problem_groups if group.physical_sheet_id == sheet.id],
             key=lambda group: group.display_order,
         )
         if groups:

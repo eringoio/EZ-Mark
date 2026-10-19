@@ -135,7 +135,9 @@ def repair_orphan_response(db: Session, response: Response) -> dict:
 
     entry = coordinate_entry_for_response(template.coordinate_map_json or {}, response)
     if entry is None:
-        entry = coordinate_entry_for_question_id(template.coordinate_map_json or {}, response.question_id)
+        entry = coordinate_entry_for_question_id(
+            template.coordinate_map_json or {}, response.question_id
+        )
     if entry is None:
         return {"repaired": False, "reason": "coordinate_entry_not_found", "match_id": None}
 
@@ -201,7 +203,11 @@ def coordinate_map_check(db: Session, template: SheetTemplate) -> dict:
         if question is not None:
             valid_count += 1
             continue
-        possible = possible_coordinate_question_matches(db, probe_instance, entry) if probe_instance else []
+        possible = (
+            possible_coordinate_question_matches(db, probe_instance, entry)
+            if probe_instance
+            else []
+        )
         missing.append(
             {
                 "question_id": entry.get("question_id"),
@@ -209,7 +215,9 @@ def coordinate_map_check(db: Session, template: SheetTemplate) -> dict:
                 "group_label": entry.get("group_label"),
                 "choice_count": len(entry.get("choices") or []),
                 "possible_matching_question_ids": [question.id for question in possible],
-                "recommended_repair_action": "auto_repair" if len(possible) == 1 else "manual_template_check",
+                "recommended_repair_action": "auto_repair"
+                if len(possible) == 1
+                else "manual_template_check",
             }
         )
     return {
@@ -219,7 +227,11 @@ def coordinate_map_check(db: Session, template: SheetTemplate) -> dict:
         "missing_question_ids": [row["question_id"] for row in missing],
         "missing_questions": missing,
         "duplicate_question_ids": _duplicate_values(
-            [entry.get("question_id") for entry in questions if entry.get("question_id") is not None]
+            [
+                entry.get("question_id")
+                for entry in questions
+                if entry.get("question_id") is not None
+            ]
         ),
         "entries_by_question_id": _entries_by_field(questions, "question_id"),
         "duplicate_display_group_labels": _duplicate_values(
@@ -301,10 +313,9 @@ def _coordinate_update_match(
         return index == int(target_index)
     if target_key:
         return coordinate_entry_key(entry, index) == target_key
-    return (
-        entry.get("question_id") == coordinate_question.get("question_id")
-        and _same_coordinate_metadata(entry, coordinate_question)
-    )
+    return entry.get("question_id") == coordinate_question.get(
+        "question_id"
+    ) and _same_coordinate_metadata(entry, coordinate_question)
 
 
 def _duplicate_values(values: list[Any]) -> list[Any]:
@@ -355,7 +366,11 @@ def orphan_review_problem_rows(db: Session, exam_id: int) -> list[dict]:
             entry = coordinate_entry_for_question_id(
                 template.coordinate_map_json or {}, response.question_id
             )
-        matches = possible_coordinate_question_matches(db, sheet_instance, entry) if sheet_instance and entry else []
+        matches = (
+            possible_coordinate_question_matches(db, sheet_instance, entry)
+            if sheet_instance and entry
+            else []
+        )
         rows.append(
             {
                 "response_id": response.id,

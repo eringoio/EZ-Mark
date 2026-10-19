@@ -195,11 +195,14 @@ def apply_rating_correction(
 
 
 def count_remaining_submission_ratings(db: Session, submission_page_id: int) -> int:
-    return db.scalar(
-        select(func.count(PeerReviewRating.id))
-        .where(PeerReviewRating.submission_page_id == submission_page_id)
-        .where(PeerReviewRating.status.in_(PROBLEM_STATUSES))
-    ) or 0
+    return (
+        db.scalar(
+            select(func.count(PeerReviewRating.id))
+            .where(PeerReviewRating.submission_page_id == submission_page_id)
+            .where(PeerReviewRating.status.in_(PROBLEM_STATUSES))
+        )
+        or 0
+    )
 
 
 def resolve_remaining_submission_ratings(

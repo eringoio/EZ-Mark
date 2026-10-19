@@ -6,6 +6,8 @@ First public version of EZ Mark, the local-first OMR scanner app for Standard Te
 
 ### Added
 
+- Bundled HTMX for offline use, with its license notice.
+- CI checks for lint, format, compilation, and tests on Ubuntu and Windows.
 - Standard Tests: multiple-choice OMR answer sheets scored with raw points and percentages, optional pass marks (points or percentage), group-based question structures with continuous or grouped numbering, scoring sections, and question-level analysis with review priorities.
 - Peer Evaluation: anonymous rating forms where participants rate one another 1–5 per competency; templates with rating scale, rater groups, page layout controls (orientation, density, furigana/ruby support), per-session rosters, page pagination, scan batches, review queue, and results with overall ranking, group comparison, and competency averages.
 - Reusable test templates with a visual builder; separate test runs created from templates.
@@ -24,3 +26,7 @@ First public version of EZ Mark, the local-first OMR scanner app for Standard Te
 ### Removed
 
 - Nothing public; this is the first public baseline.
+
+### Fixed
+
+- Portable package imports reject Windows absolute paths and backslash traversal on every platform.

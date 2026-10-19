@@ -21,7 +21,11 @@ def build_peer_review_insights(db: Session, exam: MockExam) -> dict:
     students = _students_by_id(db, form)
     groups = list(form.rater_groups)
     competencies = list(
-        db.scalars(select(Competency).where(Competency.exam_id == exam.id).order_by(Competency.display_order))
+        db.scalars(
+            select(Competency)
+            .where(Competency.exam_id == exam.id)
+            .order_by(Competency.display_order)
+        )
     )
     finals = list(
         db.scalars(
@@ -40,9 +44,15 @@ def build_peer_review_insights(db: Session, exam: MockExam) -> dict:
     group_by_id = {group.id: group for group in groups}
     group_results_by_student = {}
     for result in group_results:
-        group_results_by_student.setdefault(result.target_student_id, {})[result.rater_group_id] = result
+        group_results_by_student.setdefault(result.target_student_id, {})[result.rater_group_id] = (
+            result
+        )
 
-    combined = [_final_row(result, students, group_by_id) for result in finals if result.final_score is not None]
+    combined = [
+        _final_row(result, students, group_by_id)
+        for result in finals
+        if result.final_score is not None
+    ]
     combined.sort(key=lambda row: row["final_score"], reverse=True)
     for rank, row in enumerate(combined, start=1):
         row["rank"] = rank
@@ -74,7 +84,9 @@ def build_peer_review_insights(db: Session, exam: MockExam) -> dict:
             )
         scored_groups = [item for item in row_groups if item["average"] is not None]
         averages = [item["average"] for item in scored_groups]
-        leader = max(scored_groups, key=lambda item: item["average"]) if len(averages) >= 2 else None
+        leader = (
+            max(scored_groups, key=lambda item: item["average"]) if len(averages) >= 2 else None
+        )
         side_by_side.append(
             {
                 "student": student,
@@ -122,15 +134,25 @@ def build_peer_review_insights(db: Session, exam: MockExam) -> dict:
         )
 
     scores = [row["final_score"] for row in combined]
-    group_scores = [result.group_average_score for result in group_results if result.group_average_score is not None]
-    total_ratings = db.scalar(
-        select(func.count(PeerReviewRating.id)).where(PeerReviewRating.form_id == form.id)
-    ) or 0
-    needs_review_count = db.scalar(
-        select(func.count(PeerReviewRating.id))
-        .where(PeerReviewRating.form_id == form.id)
-        .where(PeerReviewRating.status.in_(PROBLEM_STATUSES))
-    ) or 0
+    group_scores = [
+        result.group_average_score
+        for result in group_results
+        if result.group_average_score is not None
+    ]
+    total_ratings = (
+        db.scalar(
+            select(func.count(PeerReviewRating.id)).where(PeerReviewRating.form_id == form.id)
+        )
+        or 0
+    )
+    needs_review_count = (
+        db.scalar(
+            select(func.count(PeerReviewRating.id))
+            .where(PeerReviewRating.form_id == form.id)
+            .where(PeerReviewRating.status.in_(PROBLEM_STATUSES))
+        )
+        or 0
+    )
 
     # Only count as "has results" when there is actual scored data, not merely empty
     # group sections (the recalc always writes one group_result per target/group, even
@@ -168,7 +190,10 @@ def build_peer_review_insights(db: Session, exam: MockExam) -> dict:
 
 def _students_by_id(db: Session, form: PeerReviewForm) -> dict[int, Student]:
     student_ids = [target.student_id for target in form.targets]
-    return {student.id: student for student in db.scalars(select(Student).where(Student.id.in_(student_ids)))}
+    return {
+        student.id: student
+        for student in db.scalars(select(Student).where(Student.id.in_(student_ids)))
+    }
 
 
 def _final_row(result: PeerReviewFinalResult, students: dict, group_by_id: dict) -> dict:
@@ -198,7 +223,9 @@ def _final_row(result: PeerReviewFinalResult, students: dict, group_by_id: dict)
     }
 
 
-def _group_row(result: PeerReviewGroupResult, students: dict, competencies: list[Competency]) -> dict:
+def _group_row(
+    result: PeerReviewGroupResult, students: dict, competencies: list[Competency]
+) -> dict:
     breakdown = result.competency_breakdown_json or {}
     return {
         "student": students.get(result.target_student_id),

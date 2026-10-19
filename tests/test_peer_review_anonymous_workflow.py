@@ -71,7 +71,9 @@ def test_anonymous_peer_review_uses_reusable_page_qr_without_reviewer_identity()
 
         form = get_or_create_form(session, exam)
         group = form.rater_groups[0]
-        batch = create_peer_review_batch(session, form.id, group.id, "scan.pdf", "uploaded_scans/scan.pdf")
+        batch = create_peer_review_batch(
+            session, form.id, group.id, "scan.pdf", "uploaded_scans/scan.pdf"
+        )
         scores = {
             (bubble["target_student_id"], bubble["competency_id"]): 4
             for bubble in page.coordinate_map_json["rating_bubbles"]
@@ -104,19 +106,29 @@ def test_weighted_peer_review_scoring_counts_reviewed_status() -> None:
 
         pages = generate_peer_review_pages(session, exam)
         comp_id = session.scalar(select(Competency.id).where(Competency.exam_id == exam.id))
-        teacher_batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf")
-        student_batch = create_peer_review_batch(session, form.id, student_group.id, "s.pdf", "uploaded_scans/s.pdf")
-        target_id = students[0].id
-        record_submission_page(session, teacher_batch, pages[0], 1, "processed_pages/t.png", {(target_id, comp_id): 5})
-        record_submission_page(session, student_batch, pages[0], 1, "processed_pages/s.png", {(target_id, comp_id): 3})
-        session.query(PeerReviewRating).filter(PeerReviewRating.rater_group_id == student_group.id).update(
-            {"status": "reviewed", "final_score": 3}
+        teacher_batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf"
         )
+        student_batch = create_peer_review_batch(
+            session, form.id, student_group.id, "s.pdf", "uploaded_scans/s.pdf"
+        )
+        target_id = students[0].id
+        record_submission_page(
+            session, teacher_batch, pages[0], 1, "processed_pages/t.png", {(target_id, comp_id): 5}
+        )
+        record_submission_page(
+            session, student_batch, pages[0], 1, "processed_pages/s.png", {(target_id, comp_id): 3}
+        )
+        session.query(PeerReviewRating).filter(
+            PeerReviewRating.rater_group_id == student_group.id
+        ).update({"status": "reviewed", "final_score": 3})
         session.commit()
 
         recalculate_anonymous_peer_review_results(session, form)
         result = session.scalar(
-            select(PeerReviewFinalResult).where(PeerReviewFinalResult.target_student_id == target_id)
+            select(PeerReviewFinalResult).where(
+                PeerReviewFinalResult.target_student_id == target_id
+            )
         )
 
         assert result.final_score == 4
@@ -155,14 +167,18 @@ def test_peer_review_scan_processing_allows_duplicate_reusable_qr(monkeypatch) -
         form = get_or_create_form(session, exam)
         page = generate_peer_review_pages(session, exam)[0]
         group = form.rater_groups[0]
-        batch = create_peer_review_batch(session, form.id, group.id, "scan.pdf", "uploaded_scans/scan.pdf")
+        batch = create_peer_review_batch(
+            session, form.id, group.id, "scan.pdf", "uploaded_scans/scan.pdf"
+        )
 
         monkeypatch.setattr(
             peer_review_scan_service,
             "_extract_pages_for_peer_review",
             lambda _batch: ["processed_pages/a.png", "processed_pages/b.png"],
         )
-        monkeypatch.setattr(peer_review_scan_service, "_detect_qr_token", lambda _path: page.qr_token)
+        monkeypatch.setattr(
+            peer_review_scan_service, "_detect_qr_token", lambda _path: page.qr_token
+        )
         competency = session.scalar(select(Competency).where(Competency.exam_id == exam.id))
         monkeypatch.setattr(
             peer_review_scan_service,
@@ -264,8 +280,12 @@ def test_peer_review_layout_change_blocked_after_ratings_exist() -> None:
         form = get_or_create_form(session, exam)
         page = generate_peer_review_pages(session, exam)[0]
         comp_id = session.scalar(select(Competency.id).where(Competency.exam_id == exam.id))
-        batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "scan.pdf", "uploaded_scans/scan.pdf")
-        record_submission_page(session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp_id): 4})
+        batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "scan.pdf", "uploaded_scans/scan.pdf"
+        )
+        record_submission_page(
+            session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp_id): 4}
+        )
 
         assert peer_review_form_has_scans_or_ratings(session, form.id)
         try:
@@ -285,8 +305,12 @@ def test_peer_review_target_change_blocked_after_ratings_exist() -> None:
         form = get_or_create_form(session, exam)
         page = generate_peer_review_pages(session, exam)[0]
         comp_id = session.scalar(select(Competency.id).where(Competency.exam_id == exam.id))
-        batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "scan.pdf", "uploaded_scans/scan.pdf")
-        record_submission_page(session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp_id): 4})
+        batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "scan.pdf", "uploaded_scans/scan.pdf"
+        )
+        record_submission_page(
+            session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp_id): 4}
+        )
 
         try:
             update_target(session, form, form.targets[0].id, {"active": False})
@@ -305,8 +329,12 @@ def test_peer_review_competency_delete_blocked_after_ratings() -> None:
         form = get_or_create_form(session, exam)
         page = generate_peer_review_pages(session, exam)[0]
         comp = session.scalar(select(Competency).where(Competency.exam_id == exam.id))
-        batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "scan.pdf", "uploaded_scans/scan.pdf")
-        record_submission_page(session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp.id): 4})
+        batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "scan.pdf", "uploaded_scans/scan.pdf"
+        )
+        record_submission_page(
+            session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp.id): 4}
+        )
 
         try:
             delete_competency(session, form, comp.id)
@@ -326,18 +354,32 @@ def test_peer_review_weighted_competency_scores_use_group_weights() -> None:
         form.combine_groups = True
         form.rater_groups[0].name = "Teachers"
         form.rater_groups[0].weight_percent = 70
-        student_group = PeerReviewRaterGroup(form_id=form.id, name="Students", weight_percent=30, display_order=2)
+        student_group = PeerReviewRaterGroup(
+            form_id=form.id, name="Students", weight_percent=30, display_order=2
+        )
         session.add(student_group)
         session.commit()
         page = generate_peer_review_pages(session, exam)[0]
         comp_id = session.scalar(select(Competency.id).where(Competency.exam_id == exam.id))
-        teacher_batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf")
-        student_batch = create_peer_review_batch(session, form.id, student_group.id, "s.pdf", "uploaded_scans/s.pdf")
-        record_submission_page(session, teacher_batch, page, 1, "processed_pages/t.png", {(students[0].id, comp_id): 5})
-        record_submission_page(session, student_batch, page, 1, "processed_pages/s.png", {(students[0].id, comp_id): 1})
+        teacher_batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf"
+        )
+        student_batch = create_peer_review_batch(
+            session, form.id, student_group.id, "s.pdf", "uploaded_scans/s.pdf"
+        )
+        record_submission_page(
+            session, teacher_batch, page, 1, "processed_pages/t.png", {(students[0].id, comp_id): 5}
+        )
+        record_submission_page(
+            session, student_batch, page, 1, "processed_pages/s.png", {(students[0].id, comp_id): 1}
+        )
 
         recalculate_anonymous_peer_review_results(session, form)
-        result = session.scalar(select(PeerReviewFinalResult).where(PeerReviewFinalResult.target_student_id == students[0].id))
+        result = session.scalar(
+            select(PeerReviewFinalResult).where(
+                PeerReviewFinalResult.target_student_id == students[0].id
+            )
+        )
 
         assert round(result.final_score, 2) == 3.8
         assert round(result.competency_breakdown_json[str(comp_id)]["average"], 2) == 3.8
@@ -430,11 +472,21 @@ def test_peer_review_alignment_failed_does_not_read_raw_coordinates(monkeypatch)
         exam, _students = _peer_review_exam(session)
         form = get_or_create_form(session, exam)
         page = generate_peer_review_pages(session, exam)[0]
-        batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "scan.png", "uploaded_scans/scan.png")
+        batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "scan.png", "uploaded_scans/scan.png"
+        )
         image_path = _blank_peer_review_image("alignment_failed.png")
-        monkeypatch.setattr(peer_review_scan_service, "_extract_pages_for_peer_review", lambda _batch: [image_path])
-        monkeypatch.setattr(peer_review_scan_service, "_detect_qr_token", lambda _path: page.qr_token)
-        monkeypatch.setattr(peer_review_scan_service, "_align_peer_review_page", lambda _page, _path: (None, "failed"))
+        monkeypatch.setattr(
+            peer_review_scan_service, "_extract_pages_for_peer_review", lambda _batch: [image_path]
+        )
+        monkeypatch.setattr(
+            peer_review_scan_service, "_detect_qr_token", lambda _path: page.qr_token
+        )
+        monkeypatch.setattr(
+            peer_review_scan_service,
+            "_align_peer_review_page",
+            lambda _page, _path: (None, "failed"),
+        )
 
         def fail_if_read(*_args):
             raise AssertionError("Raw coordinates should not be read after failed alignment.")
@@ -459,9 +511,15 @@ def test_peer_review_alignment_success_reads_scores(monkeypatch) -> None:
         form = get_or_create_form(session, exam)
         page = generate_peer_review_pages(session, exam)[0]
         selected = page.coordinate_map_json["rating_bubbles"][0]
-        image_path = _peer_review_scan_image(page, {(students[0].id, selected["competency_id"]): selected["score"]})
-        batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "scan.png", image_path)
-        monkeypatch.setattr(peer_review_scan_service, "_extract_pages_for_peer_review", lambda _batch: [image_path])
+        image_path = _peer_review_scan_image(
+            page, {(students[0].id, selected["competency_id"]): selected["score"]}
+        )
+        batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "scan.png", image_path
+        )
+        monkeypatch.setattr(
+            peer_review_scan_service, "_extract_pages_for_peer_review", lambda _batch: [image_path]
+        )
 
         summary = process_peer_review_batch(session, batch)
 
@@ -525,8 +583,12 @@ def test_peer_review_rater_group_deactivation_blocked_after_ratings_exist() -> N
         page = generate_peer_review_pages(session, exam)[0]
         group = form.rater_groups[0]
         comp_id = session.scalar(select(Competency.id).where(Competency.exam_id == exam.id))
-        batch = create_peer_review_batch(session, form.id, group.id, "scan.pdf", "uploaded_scans/scan.pdf")
-        record_submission_page(session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp_id): 4})
+        batch = create_peer_review_batch(
+            session, form.id, group.id, "scan.pdf", "uploaded_scans/scan.pdf"
+        )
+        record_submission_page(
+            session, batch, page, 1, "processed_pages/a.png", {(students[0].id, comp_id): 4}
+        )
 
         try:
             update_rater_group(session, form, group.id, {"active": False})
@@ -550,11 +612,35 @@ def test_peer_review_summary_export_includes_competency_columns() -> None:
         session.commit()
         student_group = add_rater_group(session, form, "Students", 30)
         page = generate_peer_review_pages(session, exam)[0]
-        comp_ids = list(session.scalars(select(Competency.id).where(Competency.exam_id == exam.id).order_by(Competency.display_order)))
-        teacher_batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf")
-        student_batch = create_peer_review_batch(session, form.id, student_group.id, "s.pdf", "uploaded_scans/s.pdf")
-        record_submission_page(session, teacher_batch, page, 1, "processed_pages/t.png", {(students[0].id, comp_ids[0]): 5, (students[0].id, comp_ids[1]): 4})
-        record_submission_page(session, student_batch, page, 1, "processed_pages/s.png", {(students[0].id, comp_ids[0]): 3, (students[0].id, comp_ids[1]): 2})
+        comp_ids = list(
+            session.scalars(
+                select(Competency.id)
+                .where(Competency.exam_id == exam.id)
+                .order_by(Competency.display_order)
+            )
+        )
+        teacher_batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf"
+        )
+        student_batch = create_peer_review_batch(
+            session, form.id, student_group.id, "s.pdf", "uploaded_scans/s.pdf"
+        )
+        record_submission_page(
+            session,
+            teacher_batch,
+            page,
+            1,
+            "processed_pages/t.png",
+            {(students[0].id, comp_ids[0]): 5, (students[0].id, comp_ids[1]): 4},
+        )
+        record_submission_page(
+            session,
+            student_batch,
+            page,
+            1,
+            "processed_pages/s.png",
+            {(students[0].id, comp_ids[0]): 3, (students[0].id, comp_ids[1]): 2},
+        )
         recalculate_anonymous_peer_review_results(session, form)
 
         relative_path = generate_peer_review_summary_export(session, form, "xlsx")
@@ -580,8 +666,12 @@ def test_peer_review_summary_export_handles_combine_groups_false() -> None:
         session.commit()
         page = generate_peer_review_pages(session, exam)[0]
         comp_id = session.scalar(select(Competency.id).where(Competency.exam_id == exam.id))
-        batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf")
-        record_submission_page(session, batch, page, 1, "processed_pages/t.png", {(students[0].id, comp_id): 5})
+        batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "t.pdf", "uploaded_scans/t.pdf"
+        )
+        record_submission_page(
+            session, batch, page, 1, "processed_pages/t.png", {(students[0].id, comp_id): 5}
+        )
         recalculate_anonymous_peer_review_results(session, form)
 
         relative_path = generate_peer_review_summary_export(session, form, "xlsx")
@@ -602,7 +692,13 @@ def test_peer_review_generated_sheet_can_be_read_by_real_scanner(monkeypatch) ->
         session.commit()
         form = get_or_create_form(session, exam)
         page = generate_peer_review_pages(session, exam)[0]
-        comp_ids = list(session.scalars(select(Competency.id).where(Competency.exam_id == exam.id).order_by(Competency.display_order)))
+        comp_ids = list(
+            session.scalars(
+                select(Competency.id)
+                .where(Competency.exam_id == exam.id)
+                .order_by(Competency.display_order)
+            )
+        )
         image_path = _peer_review_scan_image(
             page,
             {
@@ -612,8 +708,12 @@ def test_peer_review_generated_sheet_can_be_read_by_real_scanner(monkeypatch) ->
             },
             file_name="generated_peer_review_scan.png",
         )
-        batch = create_peer_review_batch(session, form.id, form.rater_groups[0].id, "scan.png", image_path)
-        monkeypatch.setattr(peer_review_scan_service, "_extract_pages_for_peer_review", lambda _batch: [image_path])
+        batch = create_peer_review_batch(
+            session, form.id, form.rater_groups[0].id, "scan.png", image_path
+        )
+        monkeypatch.setattr(
+            peer_review_scan_service, "_extract_pages_for_peer_review", lambda _batch: [image_path]
+        )
 
         summary = process_peer_review_batch(session, batch)
 
@@ -630,8 +730,12 @@ def test_peer_review_generated_sheet_can_be_read_by_real_scanner(monkeypatch) ->
 
 def test_peer_review_stepper_print_link_uses_peer_review_route() -> None:
     template = Path("app/templates/exams/detail.html").read_text(encoding="utf-8")
-    stepper = template.split("<!-- Clickable stepper", 1)[1].split("{% for label, url in steps %}", 1)[0]
-    peer_block = stepper.split('{% if exam.assessment_type == "peer_review" %}', 1)[1].split("{% else %}", 1)[0]
+    stepper = template.split("<!-- Clickable stepper", 1)[1].split(
+        "{% for label, url in steps %}", 1
+    )[0]
+    peer_block = stepper.split('{% if exam.assessment_type == "peer_review" %}', 1)[1].split(
+        "{% else %}", 1
+    )[0]
     normal_block = stepper.split("{% else %}", 1)[1].split("{% endif %}", 1)[0]
 
     assert '"/exams/" ~ exam.id ~ "/peer-review/builder"' in peer_block

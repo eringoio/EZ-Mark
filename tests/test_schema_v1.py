@@ -127,12 +127,8 @@ def _legacy_private_db(engine):
                 'total_score NUMERIC, "estimated' + '_json" VARCHAR)'
             )
         )
-        connection.execute(
-            text("INSERT INTO mock_exams VALUES (1, 'Old Test', 'XYZ', 'on')")
-        )
-        connection.execute(
-            text('INSERT INTO student_results VALUES (1, 90.0, \'{"a": 1}\')')
-        )
+        connection.execute(text("INSERT INTO mock_exams VALUES (1, 'Old Test', 'XYZ', 'on')"))
+        connection.execute(text("INSERT INTO student_results VALUES (1, 90.0, '{\"a\": 1}')"))
     return {"mock_exams": 1, "student_results": 1}
 
 
@@ -162,9 +158,7 @@ def test_incompatible_db_is_refused_and_untouched(monkeypatch, tmp_path):
         )
         assert (
             connection.execute(
-                text(
-                    'SELECT "estimated' + '_json" FROM student_results WHERE id = 1'
-                )
+                text('SELECT "estimated' + '_json" FROM student_results WHERE id = 1')
             ).scalar()
             == '{"a": 1}'
         )
@@ -187,8 +181,10 @@ def test_markerless_db_with_tables_is_refused(monkeypatch, tmp_path):
     with engine.begin() as connection:
         connection.execute(text("DROP TABLE schema_info"))
         connection.execute(
-            text("INSERT INTO students (student_number, name, class_name, active, "
-                 "created_at, updated_at) VALUES ('X1', 'Old', 'A', 1, '2026-01-01', '2026-01-01')")
+            text(
+                "INSERT INTO students (student_number, name, class_name, active, "
+                "created_at, updated_at) VALUES ('X1', 'Old', 'A', 1, '2026-01-01', '2026-01-01')"
+            )
         )
     with pytest.raises(database.IncompatibleSchemaError, match="incompatible schema"):
         database.init_database()

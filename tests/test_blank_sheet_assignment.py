@@ -169,4 +169,7 @@ def test_manual_mapping_zero_responses_needs_review(session, monkeypatch) -> Non
     )
 
     assert page.review_status == "needs_review"
-    assert page.mapping_note == "回答を読み取れませんでした。画像またはテンプレートを確認してください。"
+    assert (
+        page.mapping_note
+        == "回答を読み取れませんでした。画像またはテンプレートを確認してください。"
+    )

@@ -106,8 +106,12 @@ def test_reviewed_blank_resolves_out_of_queue_with_no_score() -> None:
         _exam, _students, form, _comp_id, _batch, _sub = _seed_two_problem_ratings(session)
         problems = list_problem_ratings(session, form)
         apply_rating_correction(
-            session, problems[0], score=None, status="blank",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=None,
+            status="blank",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         rating = session.get(PeerReviewRating, problems[0].id)
         assert rating.status == "reviewed_blank"
@@ -122,8 +126,12 @@ def test_reviewed_invalid_resolves_out_of_queue_with_no_score() -> None:
         _exam, _students, form, _comp_id, _batch, _sub = _seed_two_problem_ratings(session)
         problems = list_problem_ratings(session, form)
         apply_rating_correction(
-            session, problems[0], score=None, status="invalid",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=None,
+            status="invalid",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         rating = session.get(PeerReviewRating, problems[0].id)
         assert rating.status == "reviewed_invalid"
@@ -145,8 +153,12 @@ def test_resolving_last_problem_empties_queue_and_flips_statuses() -> None:
         assert len(problems) == 2
         # First resolution (reviewed_blank): one problem still remains on the page.
         apply_rating_correction(
-            session, problems[0], score=None, status="blank",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=None,
+            status="blank",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         session.refresh(submission)
         session.refresh(batch)
@@ -155,8 +167,12 @@ def test_resolving_last_problem_empties_queue_and_flips_statuses() -> None:
 
         # Last resolution (reviewed_invalid): queue empties, submission/batch advance.
         apply_rating_correction(
-            session, problems[1], score=None, status="invalid",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[1],
+            score=None,
+            status="invalid",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         assert build_review_context(session, form)["problem_count"] == 0
         session.refresh(submission)
@@ -171,12 +187,20 @@ def test_recalculation_and_scoring_ignore_reviewed_blank_and_invalid() -> None:
         _exam, students, form, _comp_id, _batch, _sub = _seed_two_problem_ratings(session)
         problems = list_problem_ratings(session, form)
         apply_rating_correction(
-            session, problems[0], score=None, status="blank",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[0],
+            score=None,
+            status="blank",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         apply_rating_correction(
-            session, problems[1], score=None, status="invalid",
-            score_min=form.score_min, score_max=form.score_max,
+            session,
+            problems[1],
+            score=None,
+            status="invalid",
+            score_min=form.score_min,
+            score_max=form.score_max,
         )
         # Recalculation must not raise when only non-scoring resolutions exist...
         finals = recalculate_anonymous_peer_review_results(session, form)
@@ -194,7 +218,9 @@ def test_recalculation_and_scoring_ignore_reviewed_blank_and_invalid() -> None:
 def test_resolve_remaining_submission_ratings_marks_only_problem_statuses_blank() -> None:
     with Session(_engine()) as session:
         _exam, students, form, comp_id, batch, submission = _seed_two_problem_ratings(session)
-        existing = list(session.scalars(select(PeerReviewRating).where(PeerReviewRating.form_id == form.id)))
+        existing = list(
+            session.scalars(select(PeerReviewRating).where(PeerReviewRating.form_id == form.id))
+        )
         for rating in existing:
             session.delete(rating)
         session.flush()
@@ -465,8 +491,12 @@ def test_insights_has_results_false_for_empty_group_sections() -> None:
         exam, _students, form, _comp_id, _batch, _sub = _seed_two_problem_ratings(session)
         for rating in list_problem_ratings(session, form):
             apply_rating_correction(
-                session, rating, score=None, status="blank",
-                score_min=form.score_min, score_max=form.score_max,
+                session,
+                rating,
+                score=None,
+                status="blank",
+                score_min=form.score_min,
+                score_max=form.score_max,
             )
         recalculate_anonymous_peer_review_results(session, form)
         insights = build_peer_review_insights(session, exam)
@@ -481,8 +511,12 @@ def test_insights_has_results_true_with_real_scores() -> None:
         exam, _students, form, _comp_id, _batch, _sub = _seed_two_problem_ratings(session)
         for rating in list_problem_ratings(session, form):
             apply_rating_correction(
-                session, rating, score=4, status="reviewed",
-                score_min=form.score_min, score_max=form.score_max,
+                session,
+                rating,
+                score=4,
+                status="reviewed",
+                score_min=form.score_min,
+                score_max=form.score_max,
             )
         recalculate_anonymous_peer_review_results(session, form)
         insights = build_peer_review_insights(session, exam)

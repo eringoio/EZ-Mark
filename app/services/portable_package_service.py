@@ -21,7 +21,7 @@ import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from secrets import token_urlsafe
 
 from sqlalchemy import select
@@ -655,8 +655,9 @@ def _package_dir() -> Path:
 def _safe_relative_path(value: str | None) -> Path | None:
     if not value or value == PURGED_SCAN_PATH:
         return None
-    path = Path(value)
-    if path.is_absolute() or ".." in path.parts:
+    windows_path = PureWindowsPath(value)
+    path = Path(value.replace("\\", "/"))
+    if windows_path.drive or windows_path.root or path.is_absolute() or ".." in path.parts:
         return None
     return path
 

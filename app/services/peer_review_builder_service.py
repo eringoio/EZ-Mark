@@ -552,9 +552,7 @@ def sync_targets_from_roster(
 def _relabel_targets(db: Session, form: PeerReviewForm, order_map: dict[int, int]) -> bool:
     """Refresh every target's display label to ``"<order>. <name>"`` (display-only)."""
     changed = False
-    for target in db.scalars(
-        select(PeerReviewTarget).where(PeerReviewTarget.form_id == form.id)
-    ):
+    for target in db.scalars(select(PeerReviewTarget).where(PeerReviewTarget.form_id == form.id)):
         student = target.student or db.get(Student, target.student_id)
         order = order_map.get(target.student_id, target.display_order)
         label = _target_label(student, order)

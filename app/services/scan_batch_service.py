@@ -615,7 +615,9 @@ def _save_qr_candidate_crops(
     manifest = []
     for index, candidate in enumerate(selected, start=1):
         filename = f"{index:03}_{candidate.name}.png"
-        saved = save_image_for_omr(target_dir / filename, candidate.image, context="qr_candidate_debug")
+        saved = save_image_for_omr(
+            target_dir / filename, candidate.image, context="qr_candidate_debug"
+        )
         manifest.append(
             {
                 "filename": filename,
@@ -729,11 +731,7 @@ def _read_responses_for_sheet(
         cv2.IMREAD_GRAYSCALE,
         context="response_reading",
     )
-    if (
-        image is None
-        and scanned_page.aligned_image_path
-        and image_path != original_image_path
-    ):
+    if image is None and scanned_page.aligned_image_path and image_path != original_image_path:
         logger.warning(
             "Aligned scan image could not be loaded; falling back to original image",
             extra={
@@ -944,9 +942,7 @@ def _handle_duplicate_page(
     scanned_page.qr_status = "duplicate_pending"
     scanned_page.mapping_note = f"Duplicate of accepted scan page {existing.id}."
     db.flush()
-    removed = (
-        db.query(Response).filter(Response.scanned_page_id == scanned_page.id).count()
-    )
+    removed = db.query(Response).filter(Response.scanned_page_id == scanned_page.id).count()
     db.query(Response).filter(Response.scanned_page_id == scanned_page.id).delete()
     return removed
 
@@ -954,7 +950,9 @@ def _handle_duplicate_page(
 def _can_auto_replace(existing: ScannedPage, new_page: ScannedPage) -> bool:
     if existing.qr_status == "manual" or new_page.alignment_status == "failed":
         return False
-    return not any(response.status == "reviewed" or response.reviewed_at for response in existing.responses)
+    return not any(
+        response.status == "reviewed" or response.reviewed_at for response in existing.responses
+    )
 
 
 def _safe_filename(filename: str) -> str:

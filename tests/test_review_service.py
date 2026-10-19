@@ -244,9 +244,7 @@ def test_duplicate_question_id_coordinate_map_does_not_duplicate_current_overlay
             session, [response], response
         )
 
-        current_rows = [
-            payload for payload in page_response_map.values() if payload["is_current"]
-        ]
+        current_rows = [payload for payload in page_response_map.values() if payload["is_current"]]
         assert len(current_rows) == 1
         assert debug["duplicate_coordinate_question_ids"] == [question_32.id]
         assert debug["coordinate_entries_matching_current_response"] == [
@@ -399,8 +397,7 @@ def test_resolve_remaining_page_responses_marks_only_problem_statuses_blank() ->
         )
         statuses = ["blank", "multiple_mark", "unclear", "invalid", "reviewed", "ok"]
         responses = [
-            Response(scanned_page=page, question_id=999999, status=status)
-            for status in statuses
+            Response(scanned_page=page, question_id=999999, status=status) for status in statuses
         ]
         other_response = Response(scanned_page=other_page, question_id=999999, status="unclear")
         session.add_all([other_page, *responses, other_response])
@@ -643,7 +640,9 @@ def _duplicate_coordinate_page(
     )
     session.add_all([group, question_31, question_32])
     session.flush()
-    shared_question_id = duplicate_question_id if duplicate_question_id is not None else question_32.id
+    shared_question_id = (
+        duplicate_question_id if duplicate_question_id is not None else question_32.id
+    )
     template = SheetTemplate(
         exam_id=exam.id,
         physical_sheet_id=sheet.id,

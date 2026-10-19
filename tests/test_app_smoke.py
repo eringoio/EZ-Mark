@@ -8,6 +8,11 @@ def test_dashboard_loads() -> None:
         response = client.get("/")
         assert response.status_code == 200
         assert "Assessment workspace" in response.text
+        assert "/static/vendor/htmx/htmx.min.js" in response.text
+        assert "unpkg.com" not in response.text
+        script = client.get("/static/vendor/htmx/htmx.min.js")
+        assert script.status_code == 200
+        assert 'version:"1.9.12"' in script.text
 
 
 def test_healthz_returns_json_status() -> None:

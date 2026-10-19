@@ -57,6 +57,7 @@ def test_launcher_config_uses_repo_root_in_development(monkeypatch) -> None:
 
 
 def test_launcher_config_uses_executable_parent_when_frozen(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(sys, "platform", "win32")
     fake_exe = tmp_path / "EZMark.exe"
     fake_exe.write_text("", encoding="utf-8")
     monkeypatch.delenv("EZMARK_ROOT", raising=False)
@@ -113,7 +114,9 @@ def test_launcher_chrome_profile_uses_windows_home_fallback(tmp_path, monkeypatc
     monkeypatch.setattr(Path, "home", lambda: home)
     monkeypatch.setenv("EZMARK_ROOT", str(tmp_path / "InstallRoot"))
 
-    assert get_config().chrome_profile_dir == home / "AppData" / "Local" / "EZMark" / "chrome-profile"
+    assert (
+        get_config().chrome_profile_dir == home / "AppData" / "Local" / "EZMark" / "chrome-profile"
+    )
 
 
 def test_launcher_chrome_profile_uses_xdg_data_home_on_non_windows(tmp_path, monkeypatch) -> None:
@@ -132,11 +135,11 @@ def test_server_command_dev_mode_uses_repo_root_as_cwd(monkeypatch) -> None:
     runtime_root = Path(r"C:\Temp\EZMarkRuntime")
     repo_root = Path(launcher.__file__).resolve().parents[1]
     monkeypatch.setenv("EZMARK_ROOT", str(runtime_root))
-    monkeypatch.setenv("EZMARK_DEV_SERVER_CMD", r"python scripts\run_ezmark_server.py")
+    monkeypatch.setenv("EZMARK_DEV_SERVER_CMD", "python scripts/run_ezmark_server.py")
 
     command, cwd = launcher._server_command()
 
-    assert command == ["python", r"scripts\run_ezmark_server.py"]
+    assert command == ["python", "scripts/run_ezmark_server.py"]
     assert cwd == repo_root
     assert cwd != runtime_root
 

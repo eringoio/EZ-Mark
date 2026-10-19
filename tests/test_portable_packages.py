@@ -174,7 +174,9 @@ def _peer_session(db, name) -> int:
     comp = Competency(exam_id=exam.id, name="Overall", min_score=1, max_score=5, display_order=1)
     db.add(comp)
     db.commit()
-    form = PeerReviewForm(exam_id=exam.id, title=name, score_min=1, score_max=5, students_per_page=15)
+    form = PeerReviewForm(
+        exam_id=exam.id, title=name, score_min=1, score_max=5, students_per_page=15
+    )
     db.add(form)
     db.commit()
     db.add(
@@ -188,7 +190,9 @@ def _peer_session(db, name) -> int:
         )
     )
     db.commit()
-    db.add(PeerReviewRaterGroup(form_id=form.id, name="Students", weight_percent=100, display_order=1))
+    db.add(
+        PeerReviewRaterGroup(form_id=form.id, name="Students", weight_percent=100, display_order=1)
+    )
     db.add(
         PeerReviewFinalResult(
             exam_id=exam.id,
@@ -260,7 +264,12 @@ def test_session_package_export_includes_template_roster_results() -> None:
         path = export_session_package(db, db.get(MockExam, sid))
     archive = zipfile.ZipFile(path)
     names = set(archive.namelist())
-    assert {"manifest.json", "template/template.json", "session/session.json", "session/results.json"} <= names
+    assert {
+        "manifest.json",
+        "template/template.json",
+        "session/session.json",
+        "session/results.json",
+    } <= names
     package = read_package(path)
     assert package["manifest"]["package_type"] == "session"
     assert len(package["session"]["students"]) == 1
@@ -364,9 +373,7 @@ def test_session_import_routes_show_both_cards_and_open() -> None:
         assert "QR code token" in confirm.text
         assert "new QR codes were generated" in confirm.text
         # Success page links to both the imported template and session; the session opens.
-        session_link = [
-            seg for seg in confirm.text.split('"') if seg.startswith("/exams/")
-        ][0]
+        session_link = [seg for seg in confirm.text.split('"') if seg.startswith("/exams/")][0]
         assert client.get(session_link).status_code == 200
 
 
@@ -506,11 +513,12 @@ def test_path_traversal_in_embedded_file_reference_is_refused() -> None:
         assert not outside.exists()
     # A payload claiming an absolute "original path" is refused as well.
     assert (
-        _restore_embedded_path(
-            {"original_relative_path": str(Path("C:/evil") / "evil.pdf")}
-        )
+        _restore_embedded_path({"original_relative_path": str(Path("C:/evil") / "evil.pdf")})
         == PURGED_SCAN_PATH
     )
+    for unsafe_path in (r"C:\evil.pdf", "C:evil.pdf", r"\\server\share\evil.pdf", r"..\evil.pdf"):
+        assert _restore_embedded_path(unsafe_path) == PURGED_SCAN_PATH
+    assert _restore_embedded_path(r"uploaded_scans\safe.pdf") == "uploaded_scans/safe.pdf"
 
 
 def test_session_package_with_scan_files_round_trips() -> None:
@@ -528,9 +536,7 @@ def test_session_package_with_scan_files_round_trips() -> None:
         (data_root / page_rel).parent.mkdir(parents=True, exist_ok=True)
         (data_root / page_rel).write_bytes(b"nyi")
 
-        package = read_package(
-            export_session_package(db, exam, include_scan_files=True)
-        )
+        package = read_package(export_session_package(db, exam, include_scan_files=True))
         assert package["manifest"]["embedded_file_count"] >= 1
         _template, session = import_session_package(db, package)
         db.refresh(session)

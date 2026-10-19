@@ -4,9 +4,7 @@ from app.services.export_service import _student_summary_headers
 
 def test_student_summary_headers_include_section_columns() -> None:
     exam = MockExam(name="Synthetic Test")
-    section = ScoringSection(
-        code="language_knowledge", name="Language Knowledge"
-    )
+    section = ScoringSection(code="language_knowledge", name="Language Knowledge")
     exam.scoring_sections = [section]
 
     headers = _student_summary_headers(exam)

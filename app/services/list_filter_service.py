@@ -205,9 +205,7 @@ def paginate_items(items: Sequence[MockExam], filters: ListFilters) -> Paginated
     )
 
 
-def apply_filters_and_paginate(
-    exams: Iterable[MockExam], filters: ListFilters
-) -> PaginatedResult:
+def apply_filters_and_paginate(exams: Iterable[MockExam], filters: ListFilters) -> PaginatedResult:
     return paginate_items(apply_filters(exams, filters), filters)
 
 

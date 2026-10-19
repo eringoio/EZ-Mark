@@ -108,9 +108,7 @@ def test_short_label_suppresses_per_segment_ruby() -> None:
         )
         column = next(
             c
-            for c in client.get(f"{base}/layout").json()["pages"][0]["layout"][
-                "competency_columns"
-            ]
+            for c in client.get(f"{base}/layout").json()["pages"][0]["layout"]["competency_columns"]
             if c["name"] == "時間内に話せた"
         )
         # Per-segment ruby is suppressed (its runs index into the full name, not the short
@@ -125,11 +123,10 @@ def test_clearing_ruby_removes_it() -> None:
         template_id = _peer_template(client)
         base = f"/templates/{template_id}/peer-review"
         ruby = [{"base_text": "話", "reading": "はな"}]
-        client.post(
-            f"{base}/competencies", data={"name": "話せた", "name_ruby_json": _dumps(ruby)}
-        )
+        client.post(f"{base}/competencies", data={"name": "話せた", "name_ruby_json": _dumps(ruby)})
         comp = next(
-            c for c in client.get(f"{base}/builder/state").json()["competencies"]
+            c
+            for c in client.get(f"{base}/builder/state").json()["competencies"]
             if c["name"] == "話せた"
         )
         assert comp["name_ruby"] == ruby
@@ -138,7 +135,8 @@ def test_clearing_ruby_removes_it() -> None:
             data={"name": "話せた", "name_ruby_json": "[]"},
         )
         comp = next(
-            c for c in client.get(f"{base}/builder/state").json()["competencies"]
+            c
+            for c in client.get(f"{base}/builder/state").json()["competencies"]
             if c["name"] == "話せた"
         )
         assert comp["name_ruby"] == []

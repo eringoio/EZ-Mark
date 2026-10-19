@@ -82,10 +82,9 @@ def demo_is_seeded(db: Session) -> bool:
     )
     if template is None:
         return False
-    return (
-        db.scalar(select(func.count()).select_from(Question).where(Question.exam_id == template.id))
-        == len(DEMO_ANSWER_KEY)
-    )
+    return db.scalar(
+        select(func.count()).select_from(Question).where(Question.exam_id == template.id)
+    ) == len(DEMO_ANSWER_KEY)
 
 
 def _wipe_demo_database() -> None:

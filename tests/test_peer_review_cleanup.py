@@ -209,8 +209,10 @@ def test_scan_state_with_results_is_results_ready() -> None:
         _add_rating(session, exam, form, page, students[0].id, comp_id, "reviewed", final_score=4)
         session.add(
             PeerReviewFinalResult(
-                exam_id=exam.id, form_id=form.id,
-                target_student_id=students[0].id, final_score=4.0,
+                exam_id=exam.id,
+                form_id=form.id,
+                target_student_id=students[0].id,
+                final_score=4.0,
             )
         )
         session.commit()
@@ -222,9 +224,7 @@ def test_scan_state_with_results_is_results_ready() -> None:
 
 def test_normal_exam_scan_state_unchanged() -> None:
     with Session(_engine()) as session:
-        exam = MockExam(
-            name="Standard Test", assessment_type="generic_test", status="printed"
-        )
+        exam = MockExam(name="Standard Test", assessment_type="generic_test", status="printed")
         session.add(exam)
         session.commit()
 
@@ -267,8 +267,12 @@ def test_workflow_status_and_scan_state_stay_aligned() -> None:
 
         for rating in list_problem_ratings(session, form):
             apply_rating_correction(
-                session, rating, score=3, status="reviewed",
-                score_min=form.score_min, score_max=form.score_max,
+                session,
+                rating,
+                score=3,
+                status="reviewed",
+                score_min=form.score_min,
+                score_max=form.score_max,
             )
 
         # Resolved, no results yet -> both say ready_to_score (never "no_scans").

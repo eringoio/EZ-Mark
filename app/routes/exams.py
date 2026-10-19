@@ -56,9 +56,7 @@ def exams_index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse
     paginated = list_exams_paginated(db, filters)
     exams = paginated.items
     month_fallback_sessions = (
-        list_exams(db, month_fallback_filters(filters))
-        if filters.date and not exams
-        else []
+        list_exams(db, month_fallback_filters(filters)) if filters.date and not exams else []
     )
     return templates.TemplateResponse(
         request,
@@ -274,7 +272,11 @@ async def import_session_package_preview(
         return templates.TemplateResponse(
             request,
             "exams/package_import.html",
-            {"request": request, "active_nav": "sessions", "errors": [_("packages.invalid_package")]},
+            {
+                "request": request,
+                "active_nav": "sessions",
+                "errors": [_("packages.invalid_package")],
+            },
             status_code=400,
         )
     preview_dir = settings.data_root / PACKAGE_PREVIEW_DIR

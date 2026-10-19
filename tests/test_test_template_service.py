@@ -35,11 +35,6 @@ def _generic_template_input(name: str = "SUCCESS Quiz 第1回") -> TemplateCreat
     )
 
 
-
-
-
-
-
 def test_list_templates_excludes_runs() -> None:
     with _session() as session:
         template = create_blank_template(session, _generic_template_input())
@@ -373,7 +368,9 @@ def test_delete_template_removes_setup_but_keeps_runs() -> None:
 def test_delete_template_nulls_version_links() -> None:
     with _session() as session:
         original = create_blank_template(session, _generic_template_input())
-        version = MockExam(name="SUCCESS Test v2", is_template=True, previous_template_id=original.id)
+        version = MockExam(
+            name="SUCCESS Test v2", is_template=True, previous_template_id=original.id
+        )
         session.add(version)
         session.commit()
         version_id = version.id

@@ -152,7 +152,9 @@ def test_students_per_page_drives_auto_pagination() -> None:
                 f"/templates/{template_id}/runs/new",
                 data={"run_name": "Class B", "exam_date": ""},
                 follow_redirects=False,
-            ).headers["location"].split("/")[2]
+            )
+            .headers["location"]
+            .split("/")[2]
         )
 
         db = SessionLocal()

@@ -24,34 +24,43 @@ REVIEWABLE_RESPONSE_STATUSES = {"blank", "multiple_mark", "unclear", "invalid"}
 def count_reviewable(db: Session, exam_id: int) -> int:
     exam = db.get(MockExam, exam_id)
     if exam and exam.assessment_type == "peer_review":
-        return db.scalar(
-            select(func.count(PeerReviewRating.id))
-            .where(PeerReviewRating.exam_id == exam_id)
-            .where(PeerReviewRating.status.in_(PROBLEM_STATUSES))
-        ) or 0
-    return db.scalar(
-        select(func.count(Response.id))
-        .join(ScannedPage, Response.scanned_page_id == ScannedPage.id)
-        .join(ScanBatch, ScannedPage.scan_batch_id == ScanBatch.id)
-        .join(SheetInstance, ScannedPage.sheet_instance_id == SheetInstance.id)
-        .join(Question, Response.question_id == Question.id)
-        .where(ScanBatch.exam_id == exam_id)
-        .where(ScannedPage.review_status.in_(("ok", "needs_review")))
-        .where(Response.status.in_(REVIEWABLE_RESPONSE_STATUSES))
-    ) or 0
+        return (
+            db.scalar(
+                select(func.count(PeerReviewRating.id))
+                .where(PeerReviewRating.exam_id == exam_id)
+                .where(PeerReviewRating.status.in_(PROBLEM_STATUSES))
+            )
+            or 0
+        )
+    return (
+        db.scalar(
+            select(func.count(Response.id))
+            .join(ScannedPage, Response.scanned_page_id == ScannedPage.id)
+            .join(ScanBatch, ScannedPage.scan_batch_id == ScanBatch.id)
+            .join(SheetInstance, ScannedPage.sheet_instance_id == SheetInstance.id)
+            .join(Question, Response.question_id == Question.id)
+            .where(ScanBatch.exam_id == exam_id)
+            .where(ScannedPage.review_status.in_(("ok", "needs_review")))
+            .where(Response.status.in_(REVIEWABLE_RESPONSE_STATUSES))
+        )
+        or 0
+    )
 
 
 def count_orphan_reviewable(db: Session, exam_id: int) -> int:
-    return db.scalar(
-        select(func.count(Response.id))
-        .join(ScannedPage, Response.scanned_page_id == ScannedPage.id)
-        .join(ScanBatch, ScannedPage.scan_batch_id == ScanBatch.id)
-        .outerjoin(Question, Response.question_id == Question.id)
-        .where(ScanBatch.exam_id == exam_id)
-        .where(ScannedPage.review_status.in_(("ok", "needs_review")))
-        .where(Response.status.in_(REVIEWABLE_RESPONSE_STATUSES))
-        .where(Question.id.is_(None))
-    ) or 0
+    return (
+        db.scalar(
+            select(func.count(Response.id))
+            .join(ScannedPage, Response.scanned_page_id == ScannedPage.id)
+            .join(ScanBatch, ScannedPage.scan_batch_id == ScanBatch.id)
+            .outerjoin(Question, Response.question_id == Question.id)
+            .where(ScanBatch.exam_id == exam_id)
+            .where(ScannedPage.review_status.in_(("ok", "needs_review")))
+            .where(Response.status.in_(REVIEWABLE_RESPONSE_STATUSES))
+            .where(Question.id.is_(None))
+        )
+        or 0
+    )
 
 
 def list_review_responses(db: Session, exam_id: int) -> list:
@@ -80,7 +89,9 @@ def queue_sort_key(response: Response) -> tuple:
     sheet_instance = page.sheet_instance if page else None
     student_number = sheet_instance.printed_student_number if sheet_instance else ""
     physical_sheet = sheet_instance.physical_sheet if sheet_instance else None
-    sheet_order = (physical_sheet.display_order, physical_sheet.sheet_no) if physical_sheet else (9999, 9999)
+    sheet_order = (
+        (physical_sheet.display_order, physical_sheet.sheet_no) if physical_sheet else (9999, 9999)
+    )
     question = response.question
     problem_no = question.problem_no if question and question.problem_no is not None else 9999
     sub_no = 0
@@ -149,11 +160,14 @@ def mark_response_invalid(db: Session, response_id: int) -> Response:
 
 
 def count_remaining_page_responses(db: Session, scanned_page_id: int) -> int:
-    return db.scalar(
-        select(func.count(Response.id))
-        .where(Response.scanned_page_id == scanned_page_id)
-        .where(Response.status.in_(REVIEWABLE_RESPONSE_STATUSES))
-    ) or 0
+    return (
+        db.scalar(
+            select(func.count(Response.id))
+            .where(Response.scanned_page_id == scanned_page_id)
+            .where(Response.status.in_(REVIEWABLE_RESPONSE_STATUSES))
+        )
+        or 0
+    )
 
 
 def resolve_remaining_page_responses(
@@ -189,11 +203,8 @@ def resolve_remaining_page_responses(
     if page.scan_batch is not None:
         batch = page.scan_batch
         batch.problem_pages = sum(
-            1
-            for batch_page in batch.scanned_pages
-            if batch_page.review_status == "needs_review"
+            1 for batch_page in batch.scanned_pages if batch_page.review_status == "needs_review"
         )
         batch.status = "needs_review" if batch.problem_pages else "processed"
     db.commit()
     return len(responses)
-

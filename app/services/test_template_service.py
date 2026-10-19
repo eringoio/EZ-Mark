@@ -361,9 +361,7 @@ def create_run_from_template(
     if template.assessment_type == "peer_review":
         issues = peer_review_template_issues(db, template)
         if issues:
-            raise ValueError(
-                "This peer-review template is not ready yet: " + " ".join(issues)
-            )
+            raise ValueError("This peer-review template is not ready yet: " + " ".join(issues))
     elif validate_answer_key(template):
         raise ValueError(
             "This template is not ready yet. Please complete the answer key in the template builder first."

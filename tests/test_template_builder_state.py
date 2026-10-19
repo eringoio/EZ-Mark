@@ -34,9 +34,7 @@ def _imported_style_template(session: Session) -> MockExam:
         template_status="active",
     )
     sheet = PhysicalSheet(sheet_no=1, sheet_name="文字・語彙", slug="vocabulary", display_order=1)
-    section = ScoringSection(
-        code="language_knowledge", name="Language Knowledge"
-    )
+    section = ScoringSection(code="language_knowledge", name="Language Knowledge")
     template.physical_sheets.append(sheet)
     template.scoring_sections.append(section)
     session.add(template)

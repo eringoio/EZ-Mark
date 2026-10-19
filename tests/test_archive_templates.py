@@ -100,5 +100,8 @@ def test_archived_template_can_be_deleted() -> None:
     with TestClient(create_app()) as client:
         template_id = _new_template(client, "Archived Tpl Delete")
         _archive(client, template_id)
-        assert client.post(f"/templates/{template_id}/delete", follow_redirects=False).status_code == 303
+        assert (
+            client.post(f"/templates/{template_id}/delete", follow_redirects=False).status_code
+            == 303
+        )
         assert client.get(f"/templates/{template_id}").status_code == 404

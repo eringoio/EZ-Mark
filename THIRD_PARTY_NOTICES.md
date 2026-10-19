@@ -29,17 +29,16 @@ MIT redistribution; no runtime dependency is AGPL/GPL.
 | Pillow | 13.0.0 | MIT-CMU (HPND) | Copyright © 1997-2011 by Secret Labs AB; Copyright © 1996-2026 Fredrik Lundh and contributors. Permissive; requires the copyright notice reproduction above. |
 | openpyxl | 3.1.5 | MIT | Copyright (c) 2010 openpyxl |
 | python-dotenv | 1.2.4 | BSD-3-Clause | Copyright (c) 2013, Saurabh Kumar |
-| httpx | 0.28.1 | BSD-3-Clause | Copyright © 2019-2023 Encode OSS Ltd / Tom Christie |
 
 ## Dev-only tooling (not runtime requirements)
 
-These are developer tools only and are not needed to run EZ Mark; they are kept
-in `requirements.txt` for local development until they are split out.
+These developer tools are in `requirements-dev.txt`. They are not needed to run EZ Mark.
 
 | Package | Version (tested) | License |
 | --- | --- | --- |
 | pytest | 9.1.1 | MIT (Copyright (c) 2004 Holger Krekel and others) |
 | ruff | 0.17.1 | MIT (Copyright (c) 2022 Charles Marsh) |
+| httpx | 0.28.1 | BSD-3-Clause (Copyright © 2019-2023 Encode OSS Ltd / Tom Christie) |
 
 ## Bundled binary: PDFium (via pypdfium2)
 
@@ -67,9 +66,9 @@ pypdfium2 package license files alongside the bundled PDFium binary.
 
 ## Bundled frontend assets
 
-No third-party JavaScript or chart libraries are bundled; the frontend is
-server-rendered Jinja2 templates with first-party vanilla CSS/JS in
-`app/static/`. Any future bundling must be re-audited.
+HTMX 1.9.12 is bundled in `app/static/vendor/htmx/htmx.min.js` for offline use.
+Its Zero-Clause BSD license is reproduced in `app/static/vendor/htmx/LICENSE`.
+The remaining frontend assets are first-party CSS/JS in `app/static/`.
 
 ## Fonts
 

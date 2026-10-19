@@ -51,9 +51,7 @@ def _peer_review_scanned_page_count(db: Session, form_id: int) -> int:
     submission_pages = (
         db.scalar(
             select(func.count(PeerReviewSubmissionPage.id))
-            .join(
-                PeerReviewBatch, PeerReviewSubmissionPage.batch_id == PeerReviewBatch.id
-            )
+            .join(PeerReviewBatch, PeerReviewSubmissionPage.batch_id == PeerReviewBatch.id)
             .where(PeerReviewBatch.form_id == form_id)
         )
         or 0
@@ -93,15 +91,31 @@ def _session_state(db: Session, exam) -> dict:
         has_results = False
         if form:
             uploaded_pages = _peer_review_scanned_page_count(db, form.id)
-            batch_count = db.scalar(
-                select(func.count(PeerReviewBatch.id)).where(PeerReviewBatch.form_id == form.id)
-            ) or 0
-            rating_count = db.scalar(
-                select(func.count(PeerReviewRating.id)).where(PeerReviewRating.form_id == form.id)
-            ) or 0
+            batch_count = (
+                db.scalar(
+                    select(func.count(PeerReviewBatch.id)).where(PeerReviewBatch.form_id == form.id)
+                )
+                or 0
+            )
+            rating_count = (
+                db.scalar(
+                    select(func.count(PeerReviewRating.id)).where(
+                        PeerReviewRating.form_id == form.id
+                    )
+                )
+                or 0
+            )
             has_results = bool(
-                db.scalar(select(func.count(PeerReviewFinalResult.id)).where(PeerReviewFinalResult.form_id == form.id))
-                or db.scalar(select(func.count(PeerReviewGroupResult.id)).where(PeerReviewGroupResult.form_id == form.id))
+                db.scalar(
+                    select(func.count(PeerReviewFinalResult.id)).where(
+                        PeerReviewFinalResult.form_id == form.id
+                    )
+                )
+                or db.scalar(
+                    select(func.count(PeerReviewGroupResult.id)).where(
+                        PeerReviewGroupResult.form_id == form.id
+                    )
+                )
             )
         upload_url = f"/exams/{exam.id}/peer-review/scan-batches"
         review_url = f"/exams/{exam.id}/peer-review/review"
@@ -150,6 +164,7 @@ def _session_state(db: Session, exam) -> dict:
         "is_archived": exam.status == "archived",
     }
 
+
 router = APIRouter()
 
 
@@ -192,10 +207,7 @@ def _scan_review_sessions(db: Session, exams: list[MockExam]) -> list:
     return [
         _session_state(db, e)
         for e in exams
-        if (
-            e.assessment_type == "peer_review"
-            and _peer_review_has_scan_activity(db, e)
-        )
+        if (e.assessment_type == "peer_review" and _peer_review_has_scan_activity(db, e))
         or (
             e.assessment_type != "peer_review"
             and (e.scan_batches or e.status in ("scanning", "needs_review", "printed"))
@@ -237,17 +249,10 @@ def _insights_sessions(db: Session, exams: list[MockExam]) -> list:
     return [
         _session_state(db, e)
         for e in exams
-        if (
-            e.assessment_type == "peer_review"
-            and _peer_review_has_scan_activity(db, e)
-        )
+        if (e.assessment_type == "peer_review" and _peer_review_has_scan_activity(db, e))
         or (
             e.assessment_type != "peer_review"
-            and (
-                e.scan_batches
-                or e.results
-                or e.status in ("results_ready", "needs_review")
-            )
+            and (e.scan_batches or e.results or e.status in ("results_ready", "needs_review"))
         )
     ]
 

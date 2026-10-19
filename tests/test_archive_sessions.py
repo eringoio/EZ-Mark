@@ -257,7 +257,10 @@ def test_archived_direct_review_posts_do_not_mutate() -> None:
         archive_exam(db, db.get(MockExam, exam_id))
 
     with TestClient(create_app()) as client:
-        assert client.post(f"/responses/{response_id}/correct", data={"final_answer": "2"}).status_code == 409
+        assert (
+            client.post(f"/responses/{response_id}/correct", data={"final_answer": "2"}).status_code
+            == 409
+        )
         assert client.post(f"/responses/{response_id}/mark-blank").status_code == 409
         assert client.post(f"/responses/{response_id}/mark-invalid").status_code == 409
 
@@ -275,9 +278,24 @@ def test_archived_direct_peer_review_posts_do_not_mutate() -> None:
 
     with TestClient(create_app()) as client:
         # The archived guard must fire before any rating mutation.
-        assert client.post(f"/exams/{exam_id}/peer-review/review/{rating_id}", data={"score": "5"}).status_code == 409
-        assert client.post(f"/exams/{exam_id}/peer-review/submission-pages/{rating_id}/mark-remaining-blank").status_code == 409
-        assert client.post(f"/exams/{exam_id}/peer-review/submission-pages/{rating_id}/mark-remaining-invalid").status_code == 409
+        assert (
+            client.post(
+                f"/exams/{exam_id}/peer-review/review/{rating_id}", data={"score": "5"}
+            ).status_code
+            == 409
+        )
+        assert (
+            client.post(
+                f"/exams/{exam_id}/peer-review/submission-pages/{rating_id}/mark-remaining-blank"
+            ).status_code
+            == 409
+        )
+        assert (
+            client.post(
+                f"/exams/{exam_id}/peer-review/submission-pages/{rating_id}/mark-remaining-invalid"
+            ).status_code
+            == 409
+        )
 
     with SessionLocal() as db:
         rating = db.get(PeerReviewRating, rating_id)

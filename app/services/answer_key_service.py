@@ -176,14 +176,10 @@ def validate_answer_key(exam: MockExam) -> list[QuestionValidationIssue]:
 
 def _clear_existing_questions_for_sheet(exam: MockExam, physical_sheet_id: int) -> None:
     exam.questions[:] = [
-        question
-        for question in exam.questions
-        if question.physical_sheet_id != physical_sheet_id
+        question for question in exam.questions if question.physical_sheet_id != physical_sheet_id
     ]
     exam.problem_groups[:] = [
-        group
-        for group in exam.problem_groups
-        if group.physical_sheet_id != physical_sheet_id
+        group for group in exam.problem_groups if group.physical_sheet_id != physical_sheet_id
     ]
 
 

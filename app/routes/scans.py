@@ -161,9 +161,7 @@ def map_scanned_page(
     normalize_page_review_status(page)
     if responses_created == 0:
         page.review_status = "needs_review"
-        page.mapping_note = (
-            "回答を読み取れませんでした。画像またはテンプレートを確認してください。"
-        )
+        page.mapping_note = "回答を読み取れませんでした。画像またはテンプレートを確認してください。"
         logger.warning(
             "Manual scan mapping created zero OMR responses",
             extra={
@@ -615,7 +613,9 @@ def _scan_page_debug_detail(db: Session, page: ScannedPage) -> dict:
     coordinate_map = coordinate_map or {}
     questions = coordinate_map.get("questions") or []
     original_path = get_settings().data_root / page.image_path
-    aligned_path = get_settings().data_root / page.aligned_image_path if page.aligned_image_path else None
+    aligned_path = (
+        get_settings().data_root / page.aligned_image_path if page.aligned_image_path else None
+    )
     original_load = inspect_image_loading_for_omr(
         original_path,
         context="scan_debug_original",
@@ -630,7 +630,7 @@ def _scan_page_debug_detail(db: Session, page: ScannedPage) -> dict:
     )
     response_count = len(page.responses)
     total_read_rows = response_count
-    readable = (aligned_load.loaded if aligned_load else original_load.loaded)
+    readable = aligned_load.loaded if aligned_load else original_load.loaded
     aligned_image_exists = aligned_path.exists() if aligned_path else False
     diagnosis = "Responses exist."
     if (
@@ -645,7 +645,9 @@ def _scan_page_debug_detail(db: Session, page: ScannedPage) -> dict:
                 f"{diagnosis} Aligned image is missing, but original image is readable. "
                 "Response reading should fall back to the original image."
             )
-    elif total_read_rows == 0 and aligned_path and not aligned_image_exists and original_load.loaded:
+    elif (
+        total_read_rows == 0 and aligned_path and not aligned_image_exists and original_load.loaded
+    ):
         diagnosis = (
             "Aligned image is missing, but original image is readable. "
             "Response reading should fall back to the original image."
@@ -676,9 +678,7 @@ def _scan_page_debug_detail(db: Session, page: ScannedPage) -> dict:
         ),
         "opencv_aligned_image_readable": aligned_load.imread_worked if aligned_load else None,
         "aligned_image_shape": (
-            list(aligned_load.image_shape)
-            if aligned_load and aligned_load.image_shape
-            else None
+            list(aligned_load.image_shape) if aligned_load and aligned_load.image_shape else None
         ),
         "original_fallback_worked": original_load.imdecode_worked,
         "aligned_fallback_worked": aligned_load.imdecode_worked if aligned_load else None,
@@ -732,7 +732,9 @@ def _response_status_counts(responses) -> dict:
 
 
 def _reviewable_response_count(status_counts: dict) -> int:
-    return sum(status_counts.get(status, 0) for status in {"blank", "multiple_mark", "unclear", "invalid"})
+    return sum(
+        status_counts.get(status, 0) for status in {"blank", "multiple_mark", "unclear", "invalid"}
+    )
 
 
 def _page_review_status_reason(page: ScannedPage, status_counts: dict | None = None) -> str:
@@ -811,9 +813,7 @@ def _qr_debug_summary_from_sidecar(
         "scanned_page_id": page.id if page else sidecar.get("scanned_page_id") if sidecar else None,
         "batch_id": batch_id,
         "exam_id": (
-            page.scan_batch.exam_id
-            if page
-            else sidecar.get("exam_id") if sidecar else None
+            page.scan_batch.exam_id if page else sidecar.get("exam_id") if sidecar else None
         ),
         "page_no": page_no,
         "candidate_crops_dir": str(candidate_dir) if candidate_dir.exists() else None,
@@ -910,7 +910,9 @@ def _qr_token_match_diagnostics(
     return payload
 
 
-def _sheet_instance_token_exists(db: Session, token: str | None, exam_id: int | None = None) -> bool:
+def _sheet_instance_token_exists(
+    db: Session, token: str | None, exam_id: int | None = None
+) -> bool:
     if not token:
         return False
     query = select(SheetInstance.id).where(SheetInstance.qr_token == token)

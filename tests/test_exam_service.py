@@ -92,7 +92,7 @@ def test_update_exam_rejects_bad_date_and_empty_name() -> None:
             ExamCreateInput(
                 name="Original",
                 assessment_type="generic_test",
-                        exam_date=None,
+                exam_date=None,
                 scoring_mode="generic_raw",
                 numbering_mode="continuous",
             ),

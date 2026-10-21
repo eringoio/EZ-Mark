@@ -1,5 +1,7 @@
 # EZ Mark
 
+**English** | [日本語](README.ja.md)
+
 ## OMR Scanner App
 
 Create, print, scan and review multiple-choice answer sheets with automatic QR matching and OMR recognition.
